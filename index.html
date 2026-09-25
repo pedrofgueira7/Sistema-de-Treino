@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Sistema de Treino — Enzo</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#14181C">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #EAEDEE;
+    --surface: #FFFFFF;
+    --surface-2: #F3F5F6;
+    --border: #D6DBDD;
+    --text: #14181C;
+    --text-muted: #5C6469;
+    --accent-leve: #1F8A57;
+    --accent-interv: #E85D2B;
+    --accent-mod: #2563A8;
+    --accent-longa: #7A4FB5;
+    --accent-prova: #C4272E;
+    --accent-forca: #495259;
+    --danger: #C4272E;
+    --ok: #1F8A57;
+    --radius: 10px;
+  }
+  :root:not([data-theme="light"]) {
+    @media (prefers-color-scheme: dark) {
+      --bg: #14181C;
+      --surface: #1C2126;
+      --surface-2: #232A30;
+      --border: #2E363C;
+      --text: #ECEFF0;
+      --text-muted: #9AA3A8;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #14181C;
+    --surface: #1C2126;
+    --surface-2: #232A30;
+    --border: #2E363C;
+    --text: #ECEFF0;
+    --text-muted: #9AA3A8;
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap { max-width: 760px; margin: 0 auto; padding: 28px 18px 64px; }
+
+  header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+  header h1 {
+    font-family: 'Oswald', 'Arial Narrow', sans-serif;
+    font-weight: 700;
+    font-size: clamp(26px, 6vw, 36px);
+    letter-spacing: 0.3px;
+    margin: 0 0 4px;
+    line-height: 1.1;
+  }
+  header p { margin: 0 0 20px; color: var(--text-muted); font-size: 14.5px; }
+  .logout-btn {
+    background: none; border: 1px solid var(--border); color: var(--text-muted);
+    border-radius: 7px; font-size: 12px; padding: 7px 10px; cursor: pointer; white-space: nowrap; margin-top: 4px;
+  }
+  .logout-btn:hover { color: var(--danger); border-color: var(--danger); }
+
+  .tabs {
+    display: flex;
+    gap: 6px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 4px;
+    margin-bottom: 24px;
+  }
+  .tab-btn {
+    flex: 1;
+    font-family: 'Inter', sans-serif;
+    font-weight: 600;
+    font-size: 13.5px;
+    padding: 9px 6px;
+    background: transparent;
+    border: none;
+    border-radius: 7px;
+    color: var(--text-muted);
+    cursor: pointer;
+  }
+  .tab-btn[aria-selected="true"] { background: var(--surface); color: var(--text); box-shadow: 0 1px 2px rgba(0,0,0,0.08); }
+
+  section[data-panel] { display: none; }
+  section[data-panel].active { display: block; }
+
+  h2.section-title {
+    font-family: 'Oswald', sans-serif;
+    font-size: 19px;
+    font-weight: 600;
+    margin: 0 0 4px;
+  }
+  .section-sub { color: var(--text-muted); font-size: 13.5px; margin: 0 0 18px; }
+
+  /* ---- Plano ---- */
+  .day-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--accent-forca);
+    border-radius: var(--radius);
+    padding: 16px;
+    margin-bottom: 12px;
+  }
+  .day-card[data-daytype="leve"] { border-left-color: var(--accent-leve); }
+  .day-card[data-daytype="interv"] { border-left-color: var(--accent-interv); }
+  .day-card[data-daytype="mod"] { border-left-color: var(--accent-mod); }
+  .day-card[data-daytype="longa"] { border-left-color: var(--accent-longa); }
+  .day-card[data-daytype="descanso"] { border-left-color: var(--border); opacity: 0.85; }
+  .day-card.done { opacity: 0.6; }
+
+  .day-label-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .day-label { font-size: 12px; color: var(--text-muted); font-weight: 600; margin-bottom: 2px; }
+  .day-title { font-family: 'Oswald', sans-serif; font-weight: 600; font-size: 17px; margin-bottom: 10px; }
+  .day-card ul { margin: 0; padding-left: 18px; font-size: 14px; line-height: 1.8; }
+  .pace-fill { font-weight: 600; }
+  .day-done {
+    display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-muted);
+    font-weight: 500; cursor: pointer; white-space: nowrap;
+  }
+  .day-done input { width: 15px; height: 15px; margin: 0; }
+
+  /* ---- Ritmos ---- */
+  .ref-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    margin-bottom: 18px;
+  }
+  .ref-row { display: grid; grid-template-columns: 1fr 1fr auto; gap: 10px; align-items: end; }
+  .field { display: flex; flex-direction: column; gap: 5px; }
+  .field.full { grid-column: 1 / -1; }
+  label { font-size: 12px; color: var(--text-muted); font-weight: 500; }
+  input, select { font-family: inherit; font-size: 15px; padding: 9px 10px; border-radius: 7px; border: 1px solid var(--border); background: var(--surface-2); color: var(--text); width: 100%; }
+  input:focus, select:focus { outline: 2px solid var(--accent-mod); outline-offset: 1px; }
+  button.primary {
+    font-family: 'Inter', sans-serif; font-weight: 600; font-size: 14px;
+    background: var(--text); color: var(--bg); border: none; border-radius: 7px;
+    padding: 10px 14px; cursor: pointer; white-space: nowrap;
+  }
+  button.primary:active { opacity: 0.85; }
+  button.primary:disabled { opacity: 0.6; cursor: default; }
+  .base-pace { margin-top: 12px; font-size: 13.5px; color: var(--text-muted); }
+  .base-pace b { font-family: 'Oswald', sans-serif; color: var(--text); font-size: 15px; }
+
+  .zone-card {
+    background: var(--surface); border: 1px solid var(--border); border-left: 4px solid var(--accent-mod);
+    border-radius: var(--radius); padding: 14px 16px; margin-bottom: 10px;
+  }
+  .zone-card[data-zone="Leve"] { border-left-color: var(--accent-leve); }
+  .zone-card[data-zone="Intervalado"] { border-left-color: var(--accent-interv); }
+  .zone-card[data-zone="Moderado"] { border-left-color: var(--accent-mod); }
+  .zone-card[data-zone="Longa"] { border-left-color: var(--accent-longa); }
+  .zone-name { font-family: 'Oswald', sans-serif; font-weight: 600; font-size: 15.5px; margin-bottom: 2px; }
+  .zone-range { font-size: 16px; font-weight: 600; margin-bottom: 4px; }
+  .zone-desc { font-size: 13px; color: var(--text-muted); }
+
+  /* ---- Diário ---- */
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 20px; }
+  .stat { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 10px; }
+  .stat .num { font-family: 'Oswald', sans-serif; font-weight: 600; font-size: 20px; line-height: 1.1; }
+  .stat .label { color: var(--text-muted); font-size: 11.5px; margin-top: 2px; }
+
+  .chart-box { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; margin-bottom: 20px; }
+  .chart-box h3 { font-family: 'Oswald', sans-serif; font-size: 15px; font-weight: 600; margin: 0 0 12px; }
+  .chart-box canvas { max-height: 220px; }
+  .chart-empty { color: var(--text-muted); font-size: 13px; text-align: center; padding: 10px 0; }
+
+  .import-btn {
+    display: none; width: 100%; background: var(--surface-2); color: var(--text); border: 1px dashed var(--border);
+    border-radius: var(--radius); padding: 12px; font-size: 13px; font-family: inherit; cursor: pointer; margin-bottom: 16px;
+  }
+
+  form.entry-form { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; margin-bottom: 24px; }
+  form.entry-form h3 { font-family: 'Oswald', sans-serif; font-size: 16px; font-weight: 600; margin: 0 0 12px; }
+  .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+  .hint { font-size: 11px; color: var(--text-muted); margin-top: -2px; }
+  .error { font-size: 12px; color: var(--danger); min-height: 15px; margin-top: 2px; }
+  .form-actions { display: flex; gap: 8px; }
+  .form-actions button.primary { flex: 1; }
+  .cancel-edit-btn {
+    display: none; flex: 1; background: var(--surface-2); color: var(--text-muted); border: 1px solid var(--border);
+    border-radius: 7px; padding: 10px 14px; font-family: inherit; font-size: 14px; font-weight: 600; cursor: pointer;
+  }
+
+  .entry {
+    background: var(--surface); border: 1px solid var(--border); border-left: 4px solid var(--accent-mod);
+    border-radius: var(--radius); padding: 13px 14px; margin-bottom: 9px;
+    display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: start;
+  }
+  .entry.new { animation: highlight 1.4s ease-out; }
+  @keyframes highlight { 0% { background: var(--surface-2); } 100% { background: var(--surface); } }
+  .entry[data-tipo="Leve"] { border-left-color: var(--accent-leve); }
+  .entry[data-tipo="Intervalado"] { border-left-color: var(--accent-interv); }
+  .entry[data-tipo="Moderado"] { border-left-color: var(--accent-mod); }
+  .entry[data-tipo="Longa"] { border-left-color: var(--accent-longa); }
+  .entry[data-tipo="Prova"] { border-left-color: var(--accent-prova); }
+  .entry-top { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 6px; }
+  .tag { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 100px; background: var(--surface-2); border: 1px solid var(--border); }
+  .tag.ok { color: var(--ok); border-color: var(--ok); }
+  .tag.off { color: var(--text-muted); }
+  .entry-date { font-weight: 600; font-size: 14px; }
+  .entry-metrics { display: flex; gap: 14px; flex-wrap: wrap; font-size: 13.5px; margin-bottom: 4px; }
+  .entry-metrics span b { font-family: 'Oswald', sans-serif; font-weight: 600; }
+  .entry-notes { color: var(--text-muted); font-size: 13px; margin-top: 2px; }
+  .remove-btn { background: none; border: 1px solid var(--border); color: var(--text-muted); border-radius: 7px; font-size: 12px; padding: 6px 9px; cursor: pointer; white-space: nowrap; }
+  .remove-btn:hover { color: var(--danger); border-color: var(--danger); }
+  .edit-btn:hover { color: var(--accent-mod); border-color: var(--accent-mod); }
+  .empty { color: var(--text-muted); font-size: 14px; border: 1px dashed var(--border); border-radius: var(--radius); padding: 20px; text-align: center; }
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div class="wrap" id="authScreen" style="display:none;">
+  <header>
+    <div>
+      <h1>Sistema de Treino</h1>
+      <p>Entre para acessar seu plano, ritmos e diário.</p>
+    </div>
+  </header>
+  <form class="entry-form" id="loginForm">
+    <h3>Entrar</h3>
+    <div class="field-row" style="grid-template-columns: 1fr;">
+      <div class="field full">
+        <label for="authUsuario">Usuário</label>
+        <input type="text" id="authUsuario" required autocomplete="username" autocapitalize="off" spellcheck="false">
+      </div>
+    </div>
+    <div class="field-row" style="grid-template-columns: 1fr;">
+      <div class="field full">
+        <label for="authSenha">Senha</label>
+        <input type="password" id="authSenha" required minlength="6" autocomplete="current-password">
+      </div>
+    </div>
+    <div class="error" id="authError"></div>
+    <div class="form-actions">
+      <button type="submit" class="primary">Entrar</button>
+      <button type="button" class="cancel-edit-btn" style="display:block;" id="signupBtn">Criar conta</button>
+    </div>
+  </form>
+</div>
+
+<!-- APP -->
+<div class="wrap" id="appScreen" style="display:none;">
+  <header>
+    <div>
+      <h1>Sistema de Treino</h1>
+      <p>Plano da semana, ritmos de corrida e diário de treinos — tudo num lugar só.</p>
+    </div>
+    <button class="logout-btn" id="logoutBtn">Sair</button>
+  </header>
+
+  <div class="tabs" role="tablist">
+    <button class="tab-btn" role="tab" aria-selected="true" data-target="plano">Plano da Semana</button>
+    <button class="tab-btn" role="tab" aria-selected="false" data-target="ritmos">Ritmos</button>
+    <button class="tab-btn" role="tab" aria-selected="false" data-target="diario">Diário</button>
+  </div>
+
+  <!-- PLANO -->
+  <section data-panel="plano" class="active">
+    <h2 class="section-title">Treino híbrido — 5 dias</h2>
+    <p class="section-sub">Musculação e corrida intercaladas, pra um não atrapalhar a recuperação do outro.</p>
+
+    <div class="day-card" data-daytype="leve" data-dia="1">
+      <div class="day-label-row">
+        <div class="day-label">DIA 1</div>
+        <label class="day-done"><input type="checkbox" class="day-done-checkbox"> Concluído</label>
+      </div>
+      <div class="day-title">Superior (Push) + Corrida leve</div>
+      <ul>
+        <li>Supino reto: 4x8-10</li>
+        <li>Desenvolvimento ombro: 3x10</li>
+        <li>Paralelas (dips): 3x até falhar</li>
+        <li>Elevação lateral: 3x15</li>
+        <li>Tríceps corda: 3x15</li>
+        <li>Corrida leve, 20 min — ritmo alvo: <span class="pace-fill" data-zone="Leve">—</span> min/km</li>
+      </ul>
+    </div>
+
+    <div class="day-card" data-daytype="interv" data-dia="2">
+      <div class="day-label-row">
+        <div class="day-label">DIA 2</div>
+        <label class="day-done"><input type="checkbox" class="day-done-checkbox"> Concluído</label>
+      </div>
+      <div class="day-title">Corrida intervalada</div>
+      <ul>
+        <li>Aquecimento: 5 min de trote leve</li>
+        <li>6 a 8 tiros de 400m — ritmo alvo: <span class="pace-fill" data-zone="Intervalado400">—</span> por tiro, com 1-2 min de trote leve entre cada</li>
+        <li>Desaceleração: 5 min de trote leve</li>
+      </ul>
+    </div>
+
+    <div class="day-card" data-dia="3">
+      <div class="day-label-row">
+        <div class="day-label">DIA 3</div>
+        <label class="day-done"><input type="checkbox" class="day-done-checkbox"> Concluído</label>
+      </div>
+      <div class="day-title">Pernas</div>
+      <ul>
+        <li>Agachamento livre: 4x8-10</li>
+        <li>Levantamento terra romeno: 3x10</li>
+        <li>Leg press: 3x12</li>
+        <li>Cadeira extensora + flexora (bi-set): 3x15</li>
+        <li>Panturrilha em pé: 4x15</li>
+      </ul>
+    </div>
+
+    <div class="day-card" data-daytype="mod" data-dia="4">
+      <div class="day-label-row">
+        <div class="day-label">DIA 4</div>
+        <label class="day-done"><input type="checkbox" class="day-done-checkbox"> Concluído</label>
+      </div>
+      <div class="day-title">Superior (Pull) + Corrida moderada</div>
+      <ul>
+        <li>Barra fixa: 4x até falhar</li>
+        <li>Remada curvada: 4x10</li>
+        <li>Puxada frente: 3x12</li>
+        <li>Rosca direta: 3x15</li>
+        <li>Face pull: 3x15</li>
+        <li>Corrida moderada, 25 min — ritmo alvo: <span class="pace-fill" data-zone="Moderado">—</span> min/km</li>
+      </ul>
+    </div>
+
+    <div class="day-card" data-daytype="longa" data-dia="5">
+      <div class="day-label-row">
+        <div class="day-label">DIA 5</div>
+        <label class="day-done"><input type="checkbox" class="day-done-checkbox"> Concluído</label>
+      </div>
+      <div class="day-title">Corrida longa + Core</div>
+      <ul>
+        <li>Corrida contínua, 35-40 min — ritmo alvo: <span class="pace-fill" data-zone="Longa">—</span> min/km</li>
+        <li>Prancha: 3x1 min</li>
+        <li>Abdômen infra: 3x20</li>
+      </ul>
+    </div>
+
+    <div class="day-card" data-daytype="descanso">
+      <div class="day-label">DIA 6 E 7</div>
+      <div class="day-title">Descanso</div>
+      <ul>
+        <li>Descanso total, ou caminhada leve se quiser se mexer</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- RITMOS -->
+  <section data-panel="ritmos">
+    <h2 class="section-title">Seus ritmos de corrida</h2>
+    <p class="section-sub">Calculados a partir do seu último teste de corrida. Atualize sempre que melhorar seu tempo.</p>
+
+    <div class="ref-box">
+      <div class="ref-row">
+        <div class="field">
+          <label for="refDist">Distância do teste (km)</label>
+          <input type="number" id="refDist" step="0.01" min="0.1">
+        </div>
+        <div class="field">
+          <label for="refTempo">Tempo (mm:ss)</label>
+          <input type="text" id="refTempo" placeholder="Ex: 42:57">
+        </div>
+        <button class="primary" id="refUpdateBtn">Atualizar</button>
+      </div>
+      <div class="error" id="refError"></div>
+      <div class="base-pace">Ritmo base: <b id="basePaceOut">—</b> min/km</div>
+    </div>
+
+    <div class="zone-card" data-zone="Leve">
+      <div class="zone-name">Leve / Recuperação</div>
+      <div class="zone-range" id="zoneLeveOut">—</div>
+      <div class="zone-desc">Bem tranquilo. Dá pra conversar sem ficar ofegante.</div>
+    </div>
+    <div class="zone-card" data-zone="Moderado">
+      <div class="zone-name">Moderado</div>
+      <div class="zone-range" id="zoneModOut">—</div>
+      <div class="zone-desc">Um pouco mais forte, mas ainda controlado.</div>
+    </div>
+    <div class="zone-card" data-zone="Intervalado">
+      <div class="zone-name">Intervalado (por 400m)</div>
+      <div class="zone-range" id="zoneIntervOut">—</div>
+      <div class="zone-desc">Tiros curtos e fortes, com descanso entre eles.</div>
+    </div>
+    <div class="zone-card" data-zone="Longa">
+      <div class="zone-name">Longa</div>
+      <div class="zone-range" id="zoneLongaOut">—</div>
+      <div class="zone-desc">Ritmo tranquilo, mas por mais tempo. O objetivo é aguentar, não velocidade.</div>
+    </div>
+  </section>
+
+  <!-- DIÁRIO -->
+  <section data-panel="diario">
+    <h2 class="section-title">Diário de treinos</h2>
+    <p class="section-sub">Registre cada corrida e acompanhe sua evolução.</p>
+
+    <div class="stats">
+      <div class="stat"><div class="num" id="statCount">0</div><div class="label">treinos</div></div>
+      <div class="stat"><div class="num" id="statDist">0</div><div class="label">km no total</div></div>
+      <div class="stat"><div class="num" id="statPace">—</div><div class="label">ritmo médio</div></div>
+    </div>
+
+    <div class="chart-box">
+      <h3>Evolução do ritmo</h3>
+      <canvas id="paceChart" height="220" style="display:none;"></canvas>
+      <div class="chart-empty" id="chartEmpty">Registre pelo menos 2 treinos contínuos (Leve, Moderado ou Longa) pra ver o gráfico.</div>
+    </div>
+
+    <button class="import-btn" id="importLocalBtn" type="button">Importar treinos salvos neste navegador</button>
+
+    <form class="entry-form" id="entryForm">
+      <h3 id="formTitle">Novo treino</h3>
+      <div class="field-row">
+        <div class="field">
+          <label for="fData">Data</label>
+          <input type="date" id="fData" required>
+        </div>
+        <div class="field">
+          <label for="fTipo">Tipo de treino</label>
+          <select id="fTipo" required>
+            <option value="Leve">Leve (recuperação)</option>
+            <option value="Intervalado">Intervalado</option>
+            <option value="Moderado" selected>Moderado</option>
+            <option value="Longa">Longa</option>
+            <option value="Prova">Prova / teste de tempo</option>
+          </select>
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label for="fDist">Distância (km)</label>
+          <input type="number" id="fDist" step="0.01" min="0.1" placeholder="Ex: 5" required>
+        </div>
+        <div class="field">
+          <label for="fTempo">Tempo (mm:ss)</label>
+          <input type="text" id="fTempo" placeholder="Ex: 42:57" required>
+          <div class="hint">Acima de 1h, use h:mm:ss</div>
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field full">
+          <label for="fNotas">Observações (opcional)</label>
+          <input type="text" id="fNotas" placeholder="Como se sentiu, clima, percurso...">
+        </div>
+      </div>
+      <div class="error" id="formError"></div>
+      <div class="form-actions">
+        <button type="submit" class="primary" id="submitBtn">Salvar treino</button>
+        <button type="button" class="cancel-edit-btn" id="cancelEditBtn">Cancelar edição</button>
+      </div>
+    </form>
+
+    <div id="entriesList"></div>
+  </section>
+</div>
+
+<script src="config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<script src="app.js"></script>
+</body>
+</html>
