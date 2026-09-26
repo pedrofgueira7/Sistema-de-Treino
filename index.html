@@ -3,11 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Sistema de Treino</title>
+<title>Tekne | Sistema de Treino</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#0A0A0C">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
-<link rel="icon" href="icons/icon-192.png">
+<link rel="icon" type="image/svg+xml" href="icons/tekne-mark.svg">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -98,7 +99,6 @@
 
   .wrap { max-width: 760px; margin: 0 auto; padding: 28px 18px 64px; }
 
-  .brand-mark { display: inline-flex; vertical-align: -3px; margin-right: 4px; }
 
   header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
   header h1 {
@@ -124,9 +124,11 @@
     position: sticky; top: 0; height: 100vh; overflow-y: auto;
   }
   .sidebar-brand {
+    display: flex; align-items: center; justify-content: center; gap: 6px;
     font-family: 'Oswald', sans-serif; font-weight: 700; font-size: 14px; text-align: center;
     margin-bottom: 18px; letter-spacing: 0.3px;
   }
+  .brand-logo { width: 22px; height: 22px; border-radius: 6px; object-fit: cover; flex-shrink: 0; }
   .main-content { flex: 1; min-width: 0; padding: 24px 16px 64px; }
   .main-content > section[data-panel] { max-width: 720px; margin: 0 auto; }
 
@@ -158,7 +160,8 @@
 
   @media (min-width: 640px) {
     .sidebar { width: 232px; padding: 22px 16px; }
-    .sidebar-brand { text-align: left; font-size: 18px; margin-bottom: 26px; }
+    .sidebar-brand { justify-content: flex-start; text-align: left; font-size: 18px; margin-bottom: 26px; }
+    .brand-logo { width: 26px; height: 26px; }
     .tab-btn {
       flex-direction: row; text-align: left; font-size: 14px; padding: 10px 12px; gap: 10px;
     }
@@ -370,7 +373,7 @@
 <div class="wrap" id="authScreen" style="display:none;">
   <header>
     <div>
-      <h1><svg class="brand-mark" width="22" height="22" viewBox="0 0 24 24" fill="var(--accent-mod)"><path d="M12 2l1.8 6.2L20 10l-6.2 1.8L12 18l-1.8-6.2L4 10l6.2-1.8L12 2z"/></svg>Sistema de Treino</h1>
+      <h1><img class="brand-logo" src="icons/tekne-mark.svg" alt="" style="width:30px;height:30px;vertical-align:-6px;margin-right:6px;">Sistema de Treino</h1>
       <p>Entre para acessar seu plano, ritmos e diário.</p>
     </div>
   </header>
@@ -422,7 +425,7 @@
 <!-- APP -->
 <div class="app-shell" id="appScreen" style="display:none;">
   <aside class="sidebar">
-    <div class="sidebar-brand"><svg class="brand-mark" width="16" height="16" viewBox="0 0 24 24" fill="var(--accent-mod)"><path d="M12 2l1.8 6.2L20 10l-6.2 1.8L12 18l-1.8-6.2L4 10l6.2-1.8L12 2z"/></svg>Treino</div>
+    <div class="sidebar-brand"><img class="brand-logo" src="icons/tekne-mark.svg" alt="">Tekne</div>
     <nav class="tabs" role="tablist">
       <button class="tab-btn" role="tab" aria-selected="true" data-target="plano">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
