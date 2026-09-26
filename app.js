@@ -216,6 +216,8 @@
   function showAuthScreen(message) {
     document.getElementById('appScreen').style.display = 'none';
     document.getElementById('authScreen').style.display = 'block';
+    document.getElementById('signupForm').style.display = 'none';
+    document.getElementById('loginForm').style.display = 'block';
     if (message) document.getElementById('authError').textContent = message;
   }
   function showAppScreen() {
@@ -239,12 +241,13 @@
       }).catch(function (err) { errorEl.textContent = friendlyError(err); });
     });
 
-    document.getElementById('signupBtn').addEventListener('click', function () {
-      var errorEl = document.getElementById('authError');
+    document.getElementById('signupForm').addEventListener('submit', function (ev) {
+      ev.preventDefault();
+      var errorEl = document.getElementById('signupError');
       errorEl.textContent = '';
-      var nome = document.getElementById('authNome').value.trim();
-      var usuario = document.getElementById('authUsuario').value.trim();
-      var senha = document.getElementById('authSenha').value;
+      var nome = document.getElementById('signupNome').value.trim();
+      var usuario = document.getElementById('signupUsuario').value.trim();
+      var senha = document.getElementById('signupSenha').value;
       if (!nome || !usuario || senha.length < 6) {
         errorEl.textContent = 'Preencha o nome, o usuário e uma senha com pelo menos 6 caracteres.';
         return;
@@ -255,6 +258,17 @@
         if (res.error) errorEl.textContent = friendlyError(res.error);
         else errorEl.textContent = 'Conta criada! Já pode entrar com esse usuário e senha.';
       }).catch(function (err) { errorEl.textContent = friendlyError(err); });
+    });
+
+    document.getElementById('showSignupBtn').addEventListener('click', function () {
+      document.getElementById('authError').textContent = '';
+      document.getElementById('loginForm').style.display = 'none';
+      document.getElementById('signupForm').style.display = 'block';
+    });
+    document.getElementById('showLoginBtn').addEventListener('click', function () {
+      document.getElementById('signupError').textContent = '';
+      document.getElementById('signupForm').style.display = 'none';
+      document.getElementById('loginForm').style.display = 'block';
     });
 
     document.getElementById('logoutBtn').addEventListener('click', function () {

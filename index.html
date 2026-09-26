@@ -313,6 +313,9 @@
   .avatar-sm { width: 30px; height: 30px; font-size: 13px; }
   .perfil-nome { font-family: 'Oswald', sans-serif; font-weight: 600; font-size: 19px; }
   .perfil-usuario { color: var(--text-muted); font-size: 13.5px; margin-top: 2px; }
+
+  .auth-switch { text-align: center; font-size: 13px; color: var(--text-muted); margin: 14px 0 0; }
+  .auth-switch .btn-link { font-size: 13px; padding: 0; text-decoration: underline; color: var(--text); font-weight: 600; }
 </style>
 </head>
 <body>
@@ -329,12 +332,6 @@
     <h3>Entrar</h3>
     <div class="field-row" style="grid-template-columns: 1fr;">
       <div class="field full">
-        <label for="authNome">Nome</label>
-        <input type="text" id="authNome" autocomplete="name" placeholder="Usado só ao criar conta">
-      </div>
-    </div>
-    <div class="field-row" style="grid-template-columns: 1fr;">
-      <div class="field full">
         <label for="authUsuario">Usuário</label>
         <input type="text" id="authUsuario" required autocomplete="username" autocapitalize="off" spellcheck="false">
       </div>
@@ -346,10 +343,33 @@
       </div>
     </div>
     <div class="error" id="authError"></div>
-    <div class="form-actions">
-      <button type="submit" class="primary">Entrar</button>
-      <button type="button" class="cancel-edit-btn" style="display:block;" id="signupBtn">Criar conta</button>
+    <button type="submit" class="primary" style="width:100%;">Entrar</button>
+    <p class="auth-switch">Não tem conta? <button type="button" class="btn-link" id="showSignupBtn">Criar conta</button></p>
+  </form>
+
+  <form class="entry-form" id="signupForm" style="display:none;">
+    <h3>Criar conta</h3>
+    <div class="field-row" style="grid-template-columns: 1fr;">
+      <div class="field full">
+        <label for="signupNome">Nome</label>
+        <input type="text" id="signupNome" required autocomplete="name">
+      </div>
     </div>
+    <div class="field-row" style="grid-template-columns: 1fr;">
+      <div class="field full">
+        <label for="signupUsuario">Usuário</label>
+        <input type="text" id="signupUsuario" required autocomplete="username" autocapitalize="off" spellcheck="false">
+      </div>
+    </div>
+    <div class="field-row" style="grid-template-columns: 1fr;">
+      <div class="field full">
+        <label for="signupSenha">Senha</label>
+        <input type="password" id="signupSenha" required minlength="6" autocomplete="new-password">
+      </div>
+    </div>
+    <div class="error" id="signupError"></div>
+    <button type="submit" class="primary" style="width:100%;">Criar conta</button>
+    <p class="auth-switch">Já tem conta? <button type="button" class="btn-link" id="showLoginBtn">Entrar</button></p>
   </form>
 </div>
 
