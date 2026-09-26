@@ -158,6 +158,31 @@
   .logout-btn:hover { color: var(--danger); border-color: var(--danger); }
   .logout-btn svg { width: 13px; height: 13px; }
 
+  .menu-toggle {
+    display: none; align-items: center; justify-content: center;
+    width: 38px; height: 38px; margin-bottom: 14px;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+    color: var(--text); cursor: pointer;
+  }
+  .menu-toggle svg { width: 18px; height: 18px; }
+  .sidebar-backdrop { display: none; }
+
+  @media (max-width: 639px) {
+    .menu-toggle { display: flex; }
+    .sidebar {
+      position: fixed; left: 0; top: 0; z-index: 50;
+      transform: translateX(-100%);
+      transition: transform 0.25s ease;
+      box-shadow: 8px 0 24px rgba(0, 0, 0, 0.35);
+    }
+    .app-shell.sidebar-open .sidebar { transform: translateX(0); }
+    .sidebar-backdrop {
+      display: block; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.5);
+      z-index: 40; opacity: 0; pointer-events: none; transition: opacity 0.25s ease;
+    }
+    .app-shell.sidebar-open .sidebar-backdrop { opacity: 1; pointer-events: auto; }
+  }
+
   @media (min-width: 640px) {
     .sidebar { width: 232px; padding: 22px 16px; }
     .sidebar-brand { justify-content: flex-start; text-align: left; font-size: 18px; margin-bottom: 26px; }
@@ -454,7 +479,12 @@
     </div>
   </aside>
 
+  <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+
   <main class="main-content">
+  <button class="menu-toggle" id="menuToggleBtn" aria-label="Abrir menu">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+  </button>
   <!-- PLANO -->
   <section data-panel="plano" class="active">
     <h2 class="section-title">Treino híbrido — 5 dias</h2>

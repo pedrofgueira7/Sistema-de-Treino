@@ -209,7 +209,16 @@
       document.querySelectorAll('section[data-panel]').forEach(function (s) { s.classList.remove('active'); });
       btn.setAttribute('aria-selected', 'true');
       document.querySelector('section[data-panel="' + btn.getAttribute('data-target') + '"]').classList.add('active');
+      document.getElementById('appScreen').classList.remove('sidebar-open');
     });
+  });
+
+  // ---------- menu (gaveta no mobile) ----------
+  document.getElementById('menuToggleBtn').addEventListener('click', function () {
+    document.getElementById('appScreen').classList.toggle('sidebar-open');
+  });
+  document.getElementById('sidebarBackdrop').addEventListener('click', function () {
+    document.getElementById('appScreen').classList.remove('sidebar-open');
   });
 
   // ---------- auth screens ----------
