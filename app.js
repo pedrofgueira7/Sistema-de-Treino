@@ -127,6 +127,30 @@
     d.setDate(d.getDate() - d.getDay());
     return d;
   }
+  function mondayOfCurrentWeek() {
+    var d = new Date();
+    var day = d.getDay();
+    d.setDate(d.getDate() + (day === 0 ? -6 : 1 - day));
+    return d;
+  }
+  var MONTH_ABBR = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+  function semanaRangeLabel() {
+    var monday = mondayOfCurrentWeek();
+    var friday = new Date(monday);
+    friday.setDate(monday.getDate() + 4);
+    var fmt = function (d) { return d.getDate() + ' ' + MONTH_ABBR[d.getMonth()]; };
+    return 'Semana de ' + fmt(monday) + ' a ' + fmt(friday);
+  }
+  function countPlanoConcluidos() {
+    var count = 0;
+    for (var d = 1; d <= 5; d++) if (planoConcluido[d]) count++;
+    return count;
+  }
+  function updateSemanaInfo() {
+    var el = document.getElementById('semanaInfo');
+    if (!el) return;
+    el.innerHTML = semanaRangeLabel() + ' · <b>' + countPlanoConcluidos() + '/5</b> concluídos';
+  }
   function computeStreak() {
     var streak = 0;
     var d = new Date();
@@ -342,6 +366,7 @@
       if (res2.error) { alert(friendlyError(res2.error)); checkbox.checked = !concluido; return; }
       planoConcluido[dia] = concluido;
       checkbox.closest('.day-card').classList.toggle('done', concluido);
+      updateSemanaInfo();
     }).catch(function (err) {
       alert(friendlyError(err));
       checkbox.checked = !concluido;
@@ -353,6 +378,7 @@
     if (!container || !planoData) return;
     container.innerHTML = '';
     var paces = getPaceRanges();
+    updateSemanaInfo();
 
     planoData.forEach(function (day) {
       var card = document.createElement('div');
