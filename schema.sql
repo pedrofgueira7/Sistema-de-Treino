@@ -1,5 +1,6 @@
 -- Sistema de Treino — schema do Supabase
--- Rode isto uma vez no SQL Editor do seu projeto Supabase (Project > SQL Editor > New query).
+-- Rode no SQL Editor do seu projeto Supabase (Project > SQL Editor > New query).
+-- Seguro rodar mais de uma vez: tabelas e políticas são recriadas sem apagar dados existentes.
 
 create table if not exists treinos (
   id uuid primary key default gen_random_uuid(),
@@ -41,20 +42,34 @@ alter table referencia enable row level security;
 alter table plano_progresso enable row level security;
 alter table plano enable row level security;
 
+drop policy if exists "treinos: dono le" on treinos;
+drop policy if exists "treinos: dono insere" on treinos;
+drop policy if exists "treinos: dono atualiza" on treinos;
+drop policy if exists "treinos: dono remove" on treinos;
 create policy "treinos: dono le" on treinos for select using (auth.uid() = user_id);
 create policy "treinos: dono insere" on treinos for insert with check (auth.uid() = user_id);
 create policy "treinos: dono atualiza" on treinos for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
 create policy "treinos: dono remove" on treinos for delete using (auth.uid() = user_id);
 
+drop policy if exists "referencia: dono le" on referencia;
+drop policy if exists "referencia: dono insere" on referencia;
+drop policy if exists "referencia: dono atualiza" on referencia;
 create policy "referencia: dono le" on referencia for select using (auth.uid() = user_id);
 create policy "referencia: dono insere" on referencia for insert with check (auth.uid() = user_id);
 create policy "referencia: dono atualiza" on referencia for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
+drop policy if exists "plano_progresso: dono le" on plano_progresso;
+drop policy if exists "plano_progresso: dono insere" on plano_progresso;
+drop policy if exists "plano_progresso: dono atualiza" on plano_progresso;
+drop policy if exists "plano_progresso: dono remove" on plano_progresso;
 create policy "plano_progresso: dono le" on plano_progresso for select using (auth.uid() = user_id);
 create policy "plano_progresso: dono insere" on plano_progresso for insert with check (auth.uid() = user_id);
 create policy "plano_progresso: dono atualiza" on plano_progresso for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
 create policy "plano_progresso: dono remove" on plano_progresso for delete using (auth.uid() = user_id);
 
+drop policy if exists "plano: dono le" on plano;
+drop policy if exists "plano: dono insere" on plano;
+drop policy if exists "plano: dono atualiza" on plano;
 create policy "plano: dono le" on plano for select using (auth.uid() = user_id);
 create policy "plano: dono insere" on plano for insert with check (auth.uid() = user_id);
 create policy "plano: dono atualiza" on plano for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
