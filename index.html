@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Sistema de Treino</title>
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#14181C">
+<meta name="theme-color" content="#0A0A0C">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <link rel="icon" href="icons/icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -19,33 +19,53 @@
     --border: #D6DBDD;
     --text: #14181C;
     --text-muted: #5C6469;
-    --accent-leve: #1F8A57;
-    --accent-interv: #E85D2B;
-    --accent-mod: #2563A8;
-    --accent-longa: #7A4FB5;
-    --accent-prova: #C4272E;
+    --accent-leve: #16A34A;
+    --accent-interv: #EA580C;
+    --accent-mod: #2563EB;
+    --accent-longa: #9333EA;
+    --accent-prova: #DC2626;
     --accent-forca: #495259;
-    --danger: #C4272E;
-    --ok: #1F8A57;
-    --radius: 10px;
+    --danger: #DC2626;
+    --ok: #16A34A;
+    --radius: 14px;
+    --glow-bg: none;
+    --card-shadow: 0 1px 2px rgba(20, 24, 28, 0.04);
   }
   :root:not([data-theme="light"]) {
     @media (prefers-color-scheme: dark) {
-      --bg: #14181C;
-      --surface: #1C2126;
-      --surface-2: #232A30;
-      --border: #2E363C;
-      --text: #ECEFF0;
-      --text-muted: #9AA3A8;
+      --bg: #0A0A0C;
+      --surface: #141417;
+      --surface-2: #1C1C21;
+      --border: #26262C;
+      --text: #FAFAFA;
+      --text-muted: #8E8E96;
+      --accent-leve: #22C55E;
+      --accent-interv: #F97316;
+      --accent-mod: #3B82F6;
+      --accent-longa: #A855F7;
+      --accent-prova: #EF4444;
+      --danger: #EF4444;
+      --ok: #22C55E;
+      --glow-bg: radial-gradient(circle, rgba(59, 130, 246, 0.22), transparent 65%);
+      --card-shadow: 0 1px 2px rgba(0, 0, 0, 0.5), 0 12px 32px -12px rgba(0, 0, 0, 0.6);
     }
   }
   :root[data-theme="dark"] {
-    --bg: #14181C;
-    --surface: #1C2126;
-    --surface-2: #232A30;
-    --border: #2E363C;
-    --text: #ECEFF0;
-    --text-muted: #9AA3A8;
+    --bg: #0A0A0C;
+    --surface: #141417;
+    --surface-2: #1C1C21;
+    --border: #26262C;
+    --text: #FAFAFA;
+    --text-muted: #8E8E96;
+    --accent-leve: #22C55E;
+    --accent-interv: #F97316;
+    --accent-mod: #3B82F6;
+    --accent-longa: #A855F7;
+    --accent-prova: #EF4444;
+    --danger: #EF4444;
+    --ok: #22C55E;
+    --glow-bg: radial-gradient(circle, rgba(59, 130, 246, 0.22), transparent 65%);
+    --card-shadow: 0 1px 2px rgba(0, 0, 0, 0.5), 0 12px 32px -12px rgba(0, 0, 0, 0.6);
   }
 
   * { box-sizing: border-box; }
@@ -59,9 +79,26 @@
     padding-top: env(safe-area-inset-top, 0px);
     padding-bottom: env(safe-area-inset-bottom, 0px);
     -webkit-font-smoothing: antialiased;
+    position: relative;
   }
+  body::before {
+    content: '';
+    position: fixed;
+    top: -280px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 900px;
+    height: 700px;
+    max-width: 160vw;
+    background: var(--glow-bg);
+    pointer-events: none;
+    z-index: 0;
+  }
+  #authScreen, #appScreen { position: relative; z-index: 1; }
 
   .wrap { max-width: 760px; margin: 0 auto; padding: 28px 18px 64px; }
+
+  .brand-mark { display: inline-flex; vertical-align: -3px; margin-right: 4px; }
 
   header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
   header h1 {
@@ -71,6 +108,11 @@
     letter-spacing: 0.3px;
     margin: 0 0 4px;
     line-height: 1.1;
+    background: linear-gradient(180deg, var(--text) 40%, var(--accent-mod) 220%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: var(--text);
   }
   header p { margin: 0 0 20px; color: var(--text-muted); font-size: 14.5px; }
 
@@ -212,11 +254,15 @@
   input:focus, select:focus { outline: 2px solid var(--accent-mod); outline-offset: 1px; }
   button.primary {
     font-family: 'Inter', sans-serif; font-weight: 600; font-size: 14px;
-    background: var(--text); color: var(--bg); border: none; border-radius: 7px;
-    padding: 10px 14px; cursor: pointer; white-space: nowrap;
+    background: var(--text); color: var(--bg); border: none; border-radius: 999px;
+    padding: 11px 18px; cursor: pointer; white-space: nowrap; transition: opacity 0.15s, transform 0.15s;
   }
-  button.primary:active { opacity: 0.85; }
+  button.primary:active { opacity: 0.85; transform: scale(0.98); }
   button.primary:disabled { opacity: 0.6; cursor: default; }
+
+  .day-card, .ref-box, .zone-card, .stat, .chart-box, form.entry-form, .entry, .checkin-box, .perfil-card > .avatar-lg {
+    box-shadow: var(--card-shadow);
+  }
   .base-pace { margin-top: 12px; font-size: 13.5px; color: var(--text-muted); }
   .base-pace b { font-family: 'Oswald', sans-serif; color: var(--text); font-size: 15px; }
 
@@ -324,7 +370,7 @@
 <div class="wrap" id="authScreen" style="display:none;">
   <header>
     <div>
-      <h1>Sistema de Treino</h1>
+      <h1><svg class="brand-mark" width="22" height="22" viewBox="0 0 24 24" fill="var(--accent-mod)"><path d="M12 2l1.8 6.2L20 10l-6.2 1.8L12 18l-1.8-6.2L4 10l6.2-1.8L12 2z"/></svg>Sistema de Treino</h1>
       <p>Entre para acessar seu plano, ritmos e diário.</p>
     </div>
   </header>
@@ -376,7 +422,7 @@
 <!-- APP -->
 <div class="app-shell" id="appScreen" style="display:none;">
   <aside class="sidebar">
-    <div class="sidebar-brand">Treino</div>
+    <div class="sidebar-brand"><svg class="brand-mark" width="16" height="16" viewBox="0 0 24 24" fill="var(--accent-mod)"><path d="M12 2l1.8 6.2L20 10l-6.2 1.8L12 18l-1.8-6.2L4 10l6.2-1.8L12 2z"/></svg>Treino</div>
     <nav class="tabs" role="tablist">
       <button class="tab-btn" role="tab" aria-selected="true" data-target="plano">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
