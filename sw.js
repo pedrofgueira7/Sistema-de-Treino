@@ -1,6 +1,7 @@
-// Service worker simples: cache-first do app shell (a UI abre mesmo offline/sem sinal).
-// Os dados (treinos, ritmos) exigem rede, pois vêm do Supabase.
-var CACHE_NAME = 'treino-shell-v1';
+// Service worker: network-first pro app shell (sempre busca a versão mais nova quando
+// há conexão, e só cai pro cache quando está offline). Isso evita o problema clássico de
+// PWA cache-first: instalar uma vez e nunca mais receber atualizações de index.html/app.js.
+var CACHE_NAME = 'treino-shell-v2';
 var SHELL_FILES = [
   './',
   './index.html',
@@ -39,15 +40,14 @@ self.addEventListener('fetch', function (event) {
   if (event.request.method !== 'GET') return;
 
   event.respondWith(
-    caches.match(event.request).then(function (cached) {
-      if (cached) return cached;
-      return fetch(event.request).then(function (response) {
-        if (response && response.ok && response.type === 'basic') {
-          var clone = response.clone();
-          caches.open(CACHE_NAME).then(function (cache) { cache.put(event.request, clone); });
-        }
-        return response;
-      }).catch(function () { return cached; });
+    fetch(event.request).then(function (response) {
+      if (response && response.ok && response.type === 'basic') {
+        var clone = response.clone();
+        caches.open(CACHE_NAME).then(function (cache) { cache.put(event.request, clone); });
+      }
+      return response;
+    }).catch(function () {
+      return caches.match(event.request);
     })
   );
 });

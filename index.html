@@ -140,6 +140,31 @@
   }
   .day-done input { width: 15px; height: 15px; margin: 0; }
 
+  .plano-toolbar { display: flex; justify-content: flex-end; align-items: center; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+  .btn-secondary {
+    background: var(--surface-2); color: var(--text-muted); border: 1px solid var(--border);
+    border-radius: 7px; padding: 8px 12px; font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer;
+  }
+  .btn-secondary:hover { color: var(--text); }
+  .btn-link {
+    background: none; border: none; color: var(--text-muted); font-size: 12px; text-decoration: underline;
+    cursor: pointer; font-family: inherit; padding: 8px 4px;
+  }
+  .day-title-input {
+    font-family: 'Oswald', sans-serif; font-weight: 600; font-size: 16px; margin-bottom: 10px;
+  }
+  .exercicio-edit-row { display: flex; gap: 6px; align-items: center; list-style: none; margin-left: -18px; margin-bottom: 6px; }
+  .exercicio-edit-row input { font-size: 13.5px; padding: 7px 9px; }
+  .exercicio-remove {
+    background: none; border: 1px solid var(--border); color: var(--text-muted); border-radius: 6px;
+    width: 26px; height: 26px; flex-shrink: 0; cursor: pointer; font-size: 15px; line-height: 1;
+  }
+  .exercicio-remove:hover { color: var(--danger); border-color: var(--danger); }
+  .exercicio-add {
+    margin-top: 4px; background: none; border: 1px dashed var(--border); color: var(--text-muted);
+    border-radius: 7px; padding: 7px 10px; font-size: 12.5px; font-family: inherit; cursor: pointer; width: 100%;
+  }
+
   /* ---- Ritmos ---- */
   .ref-box {
     background: var(--surface);
@@ -283,78 +308,16 @@
     <h2 class="section-title">Treino híbrido — 5 dias</h2>
     <p class="section-sub">Musculação e corrida intercaladas, pra um não atrapalhar a recuperação do outro.</p>
 
-    <div class="day-card" data-daytype="leve" data-dia="1">
-      <div class="day-label-row">
-        <div class="day-label">DIA 1</div>
-        <label class="day-done"><input type="checkbox" class="day-done-checkbox"> Concluído</label>
+    <div class="plano-toolbar">
+      <button type="button" class="btn-secondary" id="planoEditBtn">Editar plano</button>
+      <div id="planoEditActions" class="plano-toolbar" style="display:none; margin-bottom:0;">
+        <button type="button" class="btn-link" id="planoRestoreBtn">Restaurar padrão</button>
+        <button type="button" class="btn-secondary" id="planoCancelBtn">Cancelar</button>
+        <button type="button" class="primary" id="planoSaveBtn">Salvar plano</button>
       </div>
-      <div class="day-title">Superior (Push) + Corrida leve</div>
-      <ul>
-        <li>Supino reto: 4x8-10</li>
-        <li>Desenvolvimento ombro: 3x10</li>
-        <li>Paralelas (dips): 3x até falhar</li>
-        <li>Elevação lateral: 3x15</li>
-        <li>Tríceps corda: 3x15</li>
-        <li>Corrida leve, 20 min — ritmo alvo: <span class="pace-fill" data-zone="Leve">—</span> min/km</li>
-      </ul>
     </div>
 
-    <div class="day-card" data-daytype="interv" data-dia="2">
-      <div class="day-label-row">
-        <div class="day-label">DIA 2</div>
-        <label class="day-done"><input type="checkbox" class="day-done-checkbox"> Concluído</label>
-      </div>
-      <div class="day-title">Corrida intervalada</div>
-      <ul>
-        <li>Aquecimento: 5 min de trote leve</li>
-        <li>6 a 8 tiros de 400m — ritmo alvo: <span class="pace-fill" data-zone="Intervalado400">—</span> por tiro, com 1-2 min de trote leve entre cada</li>
-        <li>Desaceleração: 5 min de trote leve</li>
-      </ul>
-    </div>
-
-    <div class="day-card" data-dia="3">
-      <div class="day-label-row">
-        <div class="day-label">DIA 3</div>
-        <label class="day-done"><input type="checkbox" class="day-done-checkbox"> Concluído</label>
-      </div>
-      <div class="day-title">Pernas</div>
-      <ul>
-        <li>Agachamento livre: 4x8-10</li>
-        <li>Levantamento terra romeno: 3x10</li>
-        <li>Leg press: 3x12</li>
-        <li>Cadeira extensora + flexora (bi-set): 3x15</li>
-        <li>Panturrilha em pé: 4x15</li>
-      </ul>
-    </div>
-
-    <div class="day-card" data-daytype="mod" data-dia="4">
-      <div class="day-label-row">
-        <div class="day-label">DIA 4</div>
-        <label class="day-done"><input type="checkbox" class="day-done-checkbox"> Concluído</label>
-      </div>
-      <div class="day-title">Superior (Pull) + Corrida moderada</div>
-      <ul>
-        <li>Barra fixa: 4x até falhar</li>
-        <li>Remada curvada: 4x10</li>
-        <li>Puxada frente: 3x12</li>
-        <li>Rosca direta: 3x15</li>
-        <li>Face pull: 3x15</li>
-        <li>Corrida moderada, 25 min — ritmo alvo: <span class="pace-fill" data-zone="Moderado">—</span> min/km</li>
-      </ul>
-    </div>
-
-    <div class="day-card" data-daytype="longa" data-dia="5">
-      <div class="day-label-row">
-        <div class="day-label">DIA 5</div>
-        <label class="day-done"><input type="checkbox" class="day-done-checkbox"> Concluído</label>
-      </div>
-      <div class="day-title">Corrida longa + Core</div>
-      <ul>
-        <li>Corrida contínua, 35-40 min — ritmo alvo: <span class="pace-fill" data-zone="Longa">—</span> min/km</li>
-        <li>Prancha: 3x1 min</li>
-        <li>Abdômen infra: 3x20</li>
-      </ul>
-    </div>
+    <div id="planoContainer"></div>
 
     <div class="day-card" data-daytype="descanso">
       <div class="day-label">DIA 6 E 7</div>

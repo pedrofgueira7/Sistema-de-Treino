@@ -2,7 +2,6 @@
   'use strict';
 
   var LOCAL_ENTRIES_KEY = 'diario-corrida-enzo-v1';
-  var LOCAL_REF_KEY = 'ritmo-referencia-enzo-v1';
   var DEFAULT_REF = { distanciaKm: 5, tempoSegundos: 2577 }; // padrão: 5km em 42:57
 
   var ZONE_RATIOS = {
@@ -12,9 +11,48 @@
     Intervalado: [0.95, 1.00]
   };
 
+  var DEFAULT_PLANO = [
+    { dia: 1, daytype: 'leve', titulo: 'Superior (Push) + Corrida leve', exercicios: [
+      'Supino reto: 4x8-10',
+      'Desenvolvimento ombro: 3x10',
+      'Paralelas (dips): 3x até falhar',
+      'Elevação lateral: 3x15',
+      'Tríceps corda: 3x15',
+      'Corrida leve, 20 min — ritmo alvo: {{ritmo:Leve}} min/km'
+    ] },
+    { dia: 2, daytype: 'interv', titulo: 'Corrida intervalada', exercicios: [
+      'Aquecimento: 5 min de trote leve',
+      '6 a 8 tiros de 400m — ritmo alvo: {{ritmo:Intervalado400}} por tiro, com 1-2 min de trote leve entre cada',
+      'Desaceleração: 5 min de trote leve'
+    ] },
+    { dia: 3, daytype: null, titulo: 'Pernas', exercicios: [
+      'Agachamento livre: 4x8-10',
+      'Levantamento terra romeno: 3x10',
+      'Leg press: 3x12',
+      'Cadeira extensora + flexora (bi-set): 3x15',
+      'Panturrilha em pé: 4x15'
+    ] },
+    { dia: 4, daytype: 'mod', titulo: 'Superior (Pull) + Corrida moderada', exercicios: [
+      'Barra fixa: 4x até falhar',
+      'Remada curvada: 4x10',
+      'Puxada frente: 3x12',
+      'Rosca direta: 3x15',
+      'Face pull: 3x15',
+      'Corrida moderada, 25 min — ritmo alvo: {{ritmo:Moderado}} min/km'
+    ] },
+    { dia: 5, daytype: 'longa', titulo: 'Corrida longa + Core', exercicios: [
+      'Corrida contínua, 35-40 min — ritmo alvo: {{ritmo:Longa}} min/km',
+      'Prancha: 3x1 min',
+      'Abdômen infra: 3x20'
+    ] }
+  ];
+
   var entries = [];
   var ref = DEFAULT_REF;
   var planoConcluido = {}; // { "1": true, ... } para a semana atual
+  var planoData = null;
+  var planoEditMode = false;
+  var planoBackup = null;
   var editingId = null;
   var paceChart = null;
   var supabase = null;
@@ -64,6 +102,7 @@
     return div.innerHTML;
   }
   function isContinuous(tipo) { return tipo === 'Leve' || tipo === 'Moderado' || tipo === 'Longa'; }
+  function deepCopy(obj) { return JSON.parse(JSON.stringify(obj)); }
 
   // data local (não UTC) — evita o campo de data "pular" pro dia seguinte à noite no fuso do Brasil
   function localISOFromDate(d) {
@@ -84,7 +123,9 @@
     var msg = err.message || String(err);
     if (/Invalid login credentials/i.test(msg)) return 'Usuário ou senha incorretos.';
     if (/User already registered/i.test(msg)) return 'Já existe uma conta com esse usuário. Tente entrar.';
-    if (/Failed to fetch/i.test(msg)) return 'Não foi possível conectar ao servidor. Verifique sua internet e o config.js.';
+    if (/Failed to fetch/i.test(msg) || /NetworkError/i.test(msg) || /network/i.test(msg)) {
+      return 'Não foi possível conectar ao servidor. Verifique sua internet e tente de novo.';
+    }
     return msg;
   }
 
@@ -93,7 +134,7 @@
   var USERNAME_DOMAIN = '@treino.local';
   function usernameToEmail(usuario) {
     var slug = usuario.trim().toLowerCase()
-      .normalize('NFD').replace(/[̀-ͯ]/g, '') // remove acentos (João -> joao)
+      .normalize('NFD').replace(/\p{Diacritic}/gu, '') // remove acentos (João -> joao)
       .replace(/[^a-z0-9._-]/g, '');
     return slug + USERNAME_DOMAIN;
   }
@@ -132,7 +173,7 @@
       var senha = document.getElementById('authSenha').value;
       supabase.auth.signInWithPassword({ email: usernameToEmail(usuario), password: senha }).then(function (res) {
         if (res.error) errorEl.textContent = friendlyError(res.error);
-      });
+      }).catch(function (err) { errorEl.textContent = friendlyError(err); });
     });
 
     document.getElementById('signupBtn').addEventListener('click', function () {
@@ -147,7 +188,7 @@
       supabase.auth.signUp({ email: usernameToEmail(usuario), password: senha }).then(function (res) {
         if (res.error) errorEl.textContent = friendlyError(res.error);
         else errorEl.textContent = 'Conta criada! Já pode entrar com esse usuário e senha.';
-      });
+      }).catch(function (err) { errorEl.textContent = friendlyError(err); });
     });
 
     document.getElementById('logoutBtn').addEventListener('click', function () {
@@ -169,33 +210,29 @@
     return ref.tempoSegundos / ref.distanciaKm;
   }
 
-  function renderZones() {
+  function getPaceRanges() {
     var base = basePaceSeconds();
-    document.getElementById('basePaceOut').textContent = formatClock(base);
-
     var leve = ZONE_RATIOS.Leve.map(function (r) { return base * r; });
     var mod = ZONE_RATIOS.Moderado.map(function (r) { return base * r; });
     var longa = ZONE_RATIOS.Longa.map(function (r) { return base * r; });
     var intervPerKm = ZONE_RATIOS.Intervalado.map(function (r) { return base * r; });
     var intervPer400 = intervPerKm.map(function (s) { return s * 0.4; });
+    return {
+      base: base,
+      Leve: formatClock(leve[1]) + '–' + formatClock(leve[0]),
+      Moderado: formatClock(mod[1]) + '–' + formatClock(mod[0]),
+      Longa: formatClock(longa[1]) + '–' + formatClock(longa[0]),
+      Intervalado400: formatClock(intervPer400[0]) + '–' + formatClock(intervPer400[1])
+    };
+  }
 
-    document.getElementById('zoneLeveOut').textContent = formatClock(leve[1]) + ' – ' + formatClock(leve[0]) + ' /km';
-    document.getElementById('zoneModOut').textContent = formatClock(mod[1]) + ' – ' + formatClock(mod[0]) + ' /km';
-    document.getElementById('zoneLongaOut').textContent = formatClock(longa[1]) + ' – ' + formatClock(longa[0]) + ' /km';
-    document.getElementById('zoneIntervOut').textContent = formatClock(intervPer400[0]) + ' – ' + formatClock(intervPer400[1]);
-
-    document.querySelectorAll('.pace-fill[data-zone="Leve"]').forEach(function (el) {
-      el.textContent = formatClock(leve[1]) + '–' + formatClock(leve[0]);
-    });
-    document.querySelectorAll('.pace-fill[data-zone="Moderado"]').forEach(function (el) {
-      el.textContent = formatClock(mod[1]) + '–' + formatClock(mod[0]);
-    });
-    document.querySelectorAll('.pace-fill[data-zone="Longa"]').forEach(function (el) {
-      el.textContent = formatClock(longa[1]) + '–' + formatClock(longa[0]);
-    });
-    document.querySelectorAll('.pace-fill[data-zone="Intervalado400"]').forEach(function (el) {
-      el.textContent = formatClock(intervPer400[0]) + '–' + formatClock(intervPer400[1]);
-    });
+  function renderZones() {
+    var paces = getPaceRanges();
+    document.getElementById('basePaceOut').textContent = formatClock(paces.base);
+    document.getElementById('zoneLeveOut').textContent = paces.Leve + ' /km';
+    document.getElementById('zoneModOut').textContent = paces.Moderado + ' /km';
+    document.getElementById('zoneLongaOut').textContent = paces.Longa + ' /km';
+    document.getElementById('zoneIntervOut').textContent = paces.Intervalado400;
   }
 
   document.getElementById('refUpdateBtn').addEventListener('click', function () {
@@ -210,13 +247,185 @@
     renderStats();
     renderEntries();
     renderChart();
+    renderPlano();
     supabase.auth.getUser().then(function (res) {
       var user = res.data.user;
-      supabase.from('referencia').upsert({
+      return supabase.from('referencia').upsert({
         user_id: user.id, distancia_km: dist, tempo_segundos: tempoSec, atualizado_em: new Date().toISOString()
-      }).then(function (res2) {
-        if (res2.error) errorEl.textContent = friendlyError(res2.error);
       });
+    }).then(function (res2) {
+      if (res2.error) errorEl.textContent = friendlyError(res2.error);
+    }).catch(function (err) { errorEl.textContent = friendlyError(err); });
+  });
+
+  // ---------- plano da semana ----------
+  function renderExerciseLine(li, text, paces) {
+    var re = /\{\{ritmo:(\w+)\}\}/g;
+    var lastIndex = 0;
+    var match;
+    li.innerHTML = '';
+    while ((match = re.exec(text)) !== null) {
+      if (match.index > lastIndex) li.appendChild(document.createTextNode(text.slice(lastIndex, match.index)));
+      var span = document.createElement('span');
+      span.className = 'pace-fill';
+      span.textContent = paces[match[1]] || '—';
+      li.appendChild(span);
+      lastIndex = re.lastIndex;
+    }
+    if (lastIndex < text.length) li.appendChild(document.createTextNode(text.slice(lastIndex)));
+  }
+
+  function onTogglePlanoDia(dia, checkbox) {
+    var concluido = checkbox.checked;
+    supabase.auth.getUser().then(function (res) {
+      var user = res.data.user;
+      return supabase.from('plano_progresso').upsert({
+        user_id: user.id, semana_inicio: weekStartISO(), dia: dia, concluido: concluido
+      }, { onConflict: 'user_id,semana_inicio,dia' });
+    }).then(function (res2) {
+      if (res2.error) { alert(friendlyError(res2.error)); checkbox.checked = !concluido; return; }
+      planoConcluido[dia] = concluido;
+      checkbox.closest('.day-card').classList.toggle('done', concluido);
+    }).catch(function (err) {
+      alert(friendlyError(err));
+      checkbox.checked = !concluido;
+    });
+  }
+
+  function renderPlano() {
+    var container = document.getElementById('planoContainer');
+    if (!container || !planoData) return;
+    container.innerHTML = '';
+    var paces = getPaceRanges();
+
+    planoData.forEach(function (day) {
+      var card = document.createElement('div');
+      card.className = 'day-card';
+      if (day.daytype) card.setAttribute('data-daytype', day.daytype);
+      card.setAttribute('data-dia', day.dia);
+      if (planoConcluido[day.dia]) card.classList.add('done');
+
+      var labelRow = document.createElement('div');
+      labelRow.className = 'day-label-row';
+      var label = document.createElement('div');
+      label.className = 'day-label';
+      label.textContent = 'DIA ' + day.dia;
+      labelRow.appendChild(label);
+
+      if (!planoEditMode) {
+        var doneLabel = document.createElement('label');
+        doneLabel.className = 'day-done';
+        var checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.className = 'day-done-checkbox';
+        checkbox.checked = !!planoConcluido[day.dia];
+        checkbox.addEventListener('change', function () { onTogglePlanoDia(day.dia, checkbox); });
+        doneLabel.appendChild(checkbox);
+        doneLabel.appendChild(document.createTextNode(' Concluído'));
+        labelRow.appendChild(doneLabel);
+      }
+      card.appendChild(labelRow);
+
+      if (planoEditMode) {
+        var titleInput = document.createElement('input');
+        titleInput.type = 'text';
+        titleInput.className = 'day-title-input';
+        titleInput.value = day.titulo;
+        titleInput.addEventListener('input', function () { day.titulo = titleInput.value; });
+        card.appendChild(titleInput);
+      } else {
+        var title = document.createElement('div');
+        title.className = 'day-title';
+        title.textContent = day.titulo;
+        card.appendChild(title);
+      }
+
+      var ul = document.createElement('ul');
+      day.exercicios.forEach(function (ex, idx) {
+        var li = document.createElement('li');
+        if (planoEditMode) {
+          li.className = 'exercicio-edit-row';
+          var input = document.createElement('input');
+          input.type = 'text';
+          input.value = ex;
+          input.addEventListener('input', function () { day.exercicios[idx] = input.value; });
+          var rmBtn = document.createElement('button');
+          rmBtn.type = 'button';
+          rmBtn.className = 'exercicio-remove';
+          rmBtn.textContent = '×';
+          rmBtn.title = 'Remover linha';
+          rmBtn.addEventListener('click', function () { day.exercicios.splice(idx, 1); renderPlano(); });
+          li.appendChild(input);
+          li.appendChild(rmBtn);
+        } else {
+          renderExerciseLine(li, ex, paces);
+        }
+        ul.appendChild(li);
+      });
+      card.appendChild(ul);
+
+      if (planoEditMode) {
+        var addBtn = document.createElement('button');
+        addBtn.type = 'button';
+        addBtn.className = 'exercicio-add';
+        addBtn.textContent = '+ adicionar exercício';
+        addBtn.addEventListener('click', function () { day.exercicios.push(''); renderPlano(); });
+        card.appendChild(addBtn);
+      }
+
+      container.appendChild(card);
+    });
+  }
+
+  var planoEditBtn = document.getElementById('planoEditBtn');
+  var planoEditActions = document.getElementById('planoEditActions');
+  var planoSaveBtn = document.getElementById('planoSaveBtn');
+  var planoCancelBtn = document.getElementById('planoCancelBtn');
+  var planoRestoreBtn = document.getElementById('planoRestoreBtn');
+
+  planoEditBtn.addEventListener('click', function () {
+    planoBackup = deepCopy(planoData);
+    planoEditMode = true;
+    planoEditBtn.style.display = 'none';
+    planoEditActions.style.display = 'flex';
+    renderPlano();
+  });
+
+  planoCancelBtn.addEventListener('click', function () {
+    planoData = planoBackup;
+    planoEditMode = false;
+    planoEditBtn.style.display = 'inline-block';
+    planoEditActions.style.display = 'none';
+    renderPlano();
+  });
+
+  planoRestoreBtn.addEventListener('click', function () {
+    if (!confirm('Restaurar o plano padrão? Isso descarta as edições feitas nesta sessão (só é permanente depois de clicar em Salvar).')) return;
+    planoData = deepCopy(DEFAULT_PLANO);
+    renderPlano();
+  });
+
+  planoSaveBtn.addEventListener('click', function () {
+    planoData.forEach(function (day) {
+      day.titulo = (day.titulo || '').trim() || 'Sem título';
+      day.exercicios = day.exercicios.map(function (e) { return e.trim(); }).filter(function (e) { return e.length > 0; });
+    });
+    planoSaveBtn.disabled = true;
+    supabase.auth.getUser().then(function (res) {
+      var user = res.data.user;
+      return supabase.from('plano').upsert({
+        user_id: user.id, dados: planoData, atualizado_em: new Date().toISOString()
+      });
+    }).then(function (res2) {
+      planoSaveBtn.disabled = false;
+      if (res2.error) { alert(friendlyError(res2.error)); return; }
+      planoEditMode = false;
+      planoEditBtn.style.display = 'inline-block';
+      planoEditActions.style.display = 'none';
+      renderPlano();
+    }).catch(function (err) {
+      planoSaveBtn.disabled = false;
+      alert(friendlyError(err));
     });
   });
 
@@ -254,7 +463,7 @@
     }
     var sorted = entries.slice().sort(function (a, b) {
       if (a.data !== b.data) return a.data < b.data ? 1 : -1;
-      return (b.criadoEm || 0) < (a.criadoEm || 0) ? -1 : 1;
+      return (b.criadoEm || '') < (a.criadoEm || '') ? -1 : 1;
     });
     sorted.forEach(function (e) {
       var pace = e.distancia > 0 ? formatClock(e.tempoSegundos / e.distancia) : '—';
@@ -286,14 +495,19 @@
     });
     container.querySelectorAll('.remove-btn:not(.edit-btn)').forEach(function (btn) {
       btn.addEventListener('click', function () {
+        if (!confirm('Remover esse treino? Essa ação não pode ser desfeita.')) return;
         var id = btn.getAttribute('data-id');
+        btn.disabled = true;
         supabase.from('treinos').delete().eq('id', id).then(function (res) {
-          if (res.error) { alert(friendlyError(res.error)); return; }
+          if (res.error) { alert(friendlyError(res.error)); btn.disabled = false; return; }
           entries = entries.filter(function (e) { return String(e.id) !== id; });
           if (editingId === id) cancelEdit();
           renderStats();
           renderEntries();
           renderChart();
+        }).catch(function (err) {
+          alert(friendlyError(err));
+          btn.disabled = false;
         });
       });
     });
@@ -405,60 +619,40 @@
     if (editingId) {
       supabase.from('treinos').update({
         data: data, tipo: tipo, distancia: distancia, tempo_segundos: tempoSegundos, notas: notas.trim()
-      }).eq('id', editingId).select().then(function (res) {
+      }).eq('id', editingId).select().single().then(function (res) {
         submitBtn.disabled = false;
         if (res.error) { errorEl.textContent = friendlyError(res.error); return; }
+        var row = res.data;
         var idx = entries.findIndex(function (e) { return String(e.id) === String(editingId); });
-        if (idx > -1) entries[idx] = { id: editingId, data: data, tipo: tipo, distancia: distancia, tempoSegundos: tempoSegundos, notas: notas.trim() };
+        if (idx > -1) {
+          entries[idx] = { id: row.id, data: row.data, tipo: row.tipo, distancia: Number(row.distancia), tempoSegundos: row.tempo_segundos, notas: row.notas || '', criadoEm: row.criado_em };
+        }
         renderStats(); renderEntries(editingId); renderChart();
         cancelEdit();
+      }).catch(function (err) {
+        submitBtn.disabled = false;
+        errorEl.textContent = friendlyError(err);
       });
     } else {
       supabase.auth.getUser().then(function (res) {
         var user = res.data.user;
-        supabase.from('treinos').insert({
+        return supabase.from('treinos').insert({
           user_id: user.id, data: data, tipo: tipo, distancia: distancia, tempo_segundos: tempoSegundos, notas: notas.trim()
-        }).select().single().then(function (res2) {
-          submitBtn.disabled = false;
-          if (res2.error) { errorEl.textContent = friendlyError(res2.error); return; }
-          var row = res2.data;
-          entries.push({ id: row.id, data: row.data, tipo: row.tipo, distancia: Number(row.distancia), tempoSegundos: row.tempo_segundos, notas: row.notas || '', criadoEm: row.criado_em });
-          renderStats(); renderEntries(row.id); renderChart();
-          form.reset();
-          document.getElementById('fTipo').value = 'Moderado';
-          document.getElementById('fData').value = todayLocalISO();
-        });
+        }).select().single();
+      }).then(function (res2) {
+        submitBtn.disabled = false;
+        if (res2.error) { errorEl.textContent = friendlyError(res2.error); return; }
+        var row = res2.data;
+        entries.push({ id: row.id, data: row.data, tipo: row.tipo, distancia: Number(row.distancia), tempoSegundos: row.tempo_segundos, notas: row.notas || '', criadoEm: row.criado_em });
+        renderStats(); renderEntries(row.id); renderChart();
+        form.reset();
+        document.getElementById('fTipo').value = 'Moderado';
+        document.getElementById('fData').value = todayLocalISO();
+      }).catch(function (err) {
+        submitBtn.disabled = false;
+        errorEl.textContent = friendlyError(err);
       });
     }
-  });
-
-  // ---------- plano: checkboxes de conclusão ----------
-  function renderPlanoState() {
-    document.querySelectorAll('.day-card[data-dia]').forEach(function (card) {
-      var dia = card.getAttribute('data-dia');
-      var checkbox = card.querySelector('.day-done-checkbox');
-      var done = !!planoConcluido[dia];
-      if (checkbox) checkbox.checked = done;
-      card.classList.toggle('done', done);
-    });
-  }
-
-  document.querySelectorAll('.day-done-checkbox').forEach(function (checkbox) {
-    checkbox.addEventListener('change', function () {
-      var card = checkbox.closest('.day-card');
-      var dia = parseInt(card.getAttribute('data-dia'), 10);
-      var concluido = checkbox.checked;
-      supabase.auth.getUser().then(function (res) {
-        var user = res.data.user;
-        supabase.from('plano_progresso').upsert({
-          user_id: user.id, semana_inicio: weekStartISO(), dia: dia, concluido: concluido
-        }, { onConflict: 'user_id,semana_inicio,dia' }).then(function (res2) {
-          if (res2.error) { alert(friendlyError(res2.error)); checkbox.checked = !concluido; return; }
-          planoConcluido[dia] = concluido;
-          card.classList.toggle('done', concluido);
-        });
-      });
-    });
   });
 
   // ---------- importar dados antigos do localStorage ----------
@@ -482,11 +676,15 @@
             tempo_segundos: e.tempoSegundos, notas: e.notas || ''
           };
         });
-        supabase.from('treinos').insert(rows).then(function (res2) {
-          if (res2.error) { alert(friendlyError(res2.error)); btn.disabled = false; btn.textContent = 'Importar treinos salvos neste navegador'; return; }
-          btn.style.display = 'none';
-          loadEntries().then(function () { renderStats(); renderEntries(); renderChart(); });
-        });
+        return supabase.from('treinos').insert(rows);
+      }).then(function (res2) {
+        if (res2.error) { alert(friendlyError(res2.error)); btn.disabled = false; btn.textContent = 'Importar treinos salvos neste navegador'; return; }
+        btn.style.display = 'none';
+        loadEntries().then(function () { renderStats(); renderEntries(); renderChart(); });
+      }).catch(function (err) {
+        alert(friendlyError(err));
+        btn.disabled = false;
+        btn.textContent = 'Importar treinos salvos neste navegador';
       });
     };
   }
@@ -494,21 +692,35 @@
   // ---------- carregamento ----------
   function loadRef() {
     return supabase.from('referencia').select('*').maybeSingle().then(function (res) {
+      if (res.error) throw res.error;
       if (res.data) ref = { distanciaKm: Number(res.data.distancia_km), tempoSegundos: res.data.tempo_segundos };
       else ref = DEFAULT_REF;
     });
   }
   function loadEntries() {
     return supabase.from('treinos').select('*').then(function (res) {
+      if (res.error) throw res.error;
       entries = (res.data || []).map(function (row) {
         return { id: row.id, data: row.data, tipo: row.tipo, distancia: Number(row.distancia), tempoSegundos: row.tempo_segundos, notas: row.notas || '', criadoEm: row.criado_em };
       });
     });
   }
-  function loadPlano() {
+  function loadPlanoProgresso() {
     return supabase.from('plano_progresso').select('*').eq('semana_inicio', weekStartISO()).then(function (res) {
+      if (res.error) throw res.error;
       planoConcluido = {};
       (res.data || []).forEach(function (row) { planoConcluido[row.dia] = row.concluido; });
+    });
+  }
+  function loadPlanoData() {
+    // não fatal: se a tabela `plano` ainda não existir (ex: schema.sql não atualizado),
+    // cai pro plano padrão em vez de travar o resto do app.
+    return supabase.from('plano').select('dados').maybeSingle().then(function (res) {
+      if (res.error) throw res.error;
+      planoData = (res.data && res.data.dados) ? res.data.dados : deepCopy(DEFAULT_PLANO);
+    }).catch(function (err) {
+      console.warn('Não foi possível carregar o plano salvo, usando o padrão:', err);
+      planoData = deepCopy(DEFAULT_PLANO);
     });
   }
 
@@ -516,7 +728,7 @@
   function initApp() {
     if (appInitialized) return;
     appInitialized = true;
-    Promise.all([loadRef(), loadEntries(), loadPlano()]).then(function () {
+    Promise.all([loadRef(), loadEntries(), loadPlanoProgresso(), loadPlanoData()]).then(function () {
       document.getElementById('refDist').value = ref.distanciaKm;
       document.getElementById('refTempo').value = formatClock(ref.tempoSegundos);
       document.getElementById('fData').value = todayLocalISO();
@@ -524,8 +736,11 @@
       renderStats();
       renderEntries();
       renderChart();
-      renderPlanoState();
+      renderPlano();
       checkLocalImport();
+    }).catch(function (err) {
+      appInitialized = false;
+      alert('Não foi possível carregar seus dados: ' + friendlyError(err) + '\n\nVerifique sua internet e recarregue a página.');
     });
   }
 

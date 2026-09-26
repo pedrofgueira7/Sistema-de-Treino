@@ -29,9 +29,17 @@ create table if not exists plano_progresso (
   unique (user_id, semana_inicio, dia)
 );
 
+-- plano de treino editável (título e exercícios de cada um dos 5 dias), como JSON
+create table if not exists plano (
+  user_id uuid primary key default auth.uid() references auth.users (id) on delete cascade,
+  dados jsonb not null,
+  atualizado_em timestamptz not null default now()
+);
+
 alter table treinos enable row level security;
 alter table referencia enable row level security;
 alter table plano_progresso enable row level security;
+alter table plano enable row level security;
 
 create policy "treinos: dono le" on treinos for select using (auth.uid() = user_id);
 create policy "treinos: dono insere" on treinos for insert with check (auth.uid() = user_id);
@@ -46,6 +54,10 @@ create policy "plano_progresso: dono le" on plano_progresso for select using (au
 create policy "plano_progresso: dono insere" on plano_progresso for insert with check (auth.uid() = user_id);
 create policy "plano_progresso: dono atualiza" on plano_progresso for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
 create policy "plano_progresso: dono remove" on plano_progresso for delete using (auth.uid() = user_id);
+
+create policy "plano: dono le" on plano for select using (auth.uid() = user_id);
+create policy "plano: dono insere" on plano for insert with check (auth.uid() = user_id);
+create policy "plano: dono atualiza" on plano for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
 create index if not exists treinos_user_data_idx on treinos (user_id, data desc);
 create index if not exists plano_progresso_user_semana_idx on plano_progresso (user_id, semana_inicio);
