@@ -907,9 +907,17 @@
     });
   }
 
+  // "JWT issued at future": erro passageiro quando o relógio do aparelho está
+  // levemente dessincronizado no exato instante da renovação do token. Some
+  // sozinho em segundos, então vale tentar de novo antes de incomodar o usuário.
+  function isClockSkewError(err) {
+    var msg = (err && err.message) || String(err || '');
+    return /issued at future/i.test(msg);
+  }
+
   var appInitialized = false;
-  function initApp() {
-    if (appInitialized) return;
+  function initApp(isRetry) {
+    if (appInitialized && !isRetry) return;
     appInitialized = true;
     Promise.all([loadRef(), loadEntries(), loadPlanoProgresso(), loadPlanoData(), loadUser(), loadCheckins()]).then(function () {
       document.getElementById('refDist').value = ref.distanciaKm;
@@ -924,6 +932,10 @@
       renderPerfil();
       checkLocalImport();
     }).catch(function (err) {
+      if (!isRetry && isClockSkewError(err)) {
+        setTimeout(function () { initApp(true); }, 1200);
+        return;
+      }
       appInitialized = false;
       alert('Não foi possível carregar seus dados: ' + friendlyError(err) + '\n\nVerifique sua internet e recarregue a página.');
     });
