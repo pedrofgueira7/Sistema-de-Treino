@@ -73,34 +73,59 @@
     line-height: 1.1;
   }
   header p { margin: 0 0 20px; color: var(--text-muted); font-size: 14.5px; }
+
+  /* ---- Layout: sidebar + conteúdo ---- */
+  .app-shell { display: flex; min-height: 100vh; align-items: stretch; }
+  .sidebar {
+    width: 84px; flex-shrink: 0; background: var(--surface); border-right: 1px solid var(--border);
+    display: flex; flex-direction: column; padding: 16px 6px;
+    position: sticky; top: 0; height: 100vh; overflow-y: auto;
+  }
+  .sidebar-brand {
+    font-family: 'Oswald', sans-serif; font-weight: 700; font-size: 14px; text-align: center;
+    margin-bottom: 18px; letter-spacing: 0.3px;
+  }
+  .main-content { flex: 1; min-width: 0; padding: 24px 16px 64px; }
+  .main-content > section[data-panel] { max-width: 720px; margin: 0 auto; }
+
+  .tabs { display: flex; flex-direction: column; gap: 4px; flex: 1; }
+  .tab-btn {
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    font-family: 'Inter', sans-serif; font-weight: 600; font-size: 9.5px; text-align: center;
+    padding: 10px 4px; background: transparent; border: none; border-radius: 9px;
+    color: var(--text-muted); cursor: pointer;
+  }
+  .tab-btn svg { width: 18px; height: 18px; flex-shrink: 0; }
+  .tab-btn .tab-label-full { display: none; }
+  .tab-btn[aria-selected="true"] { background: rgba(37, 99, 168, 0.14); color: var(--accent-mod); }
+  .sidebar-user {
+    margin-top: auto; padding-top: 14px; border-top: 1px solid var(--border);
+    display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center;
+  }
+  .sidebar-user-name {
+    font-size: 10.5px; font-weight: 600; max-width: 100%; overflow: hidden;
+    text-overflow: ellipsis; white-space: nowrap;
+  }
   .logout-btn {
+    display: flex; align-items: center; justify-content: center; gap: 4px; width: 100%;
     background: none; border: 1px solid var(--border); color: var(--text-muted);
-    border-radius: 7px; font-size: 12px; padding: 7px 10px; cursor: pointer; white-space: nowrap; margin-top: 4px;
+    border-radius: 7px; font-size: 10.5px; font-weight: 600; padding: 6px 4px; cursor: pointer; white-space: nowrap;
   }
   .logout-btn:hover { color: var(--danger); border-color: var(--danger); }
+  .logout-btn svg { width: 13px; height: 13px; }
 
-  .tabs {
-    display: flex;
-    gap: 6px;
-    background: var(--surface-2);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 4px;
-    margin-bottom: 24px;
+  @media (min-width: 640px) {
+    .sidebar { width: 232px; padding: 22px 16px; }
+    .sidebar-brand { text-align: left; font-size: 18px; margin-bottom: 26px; }
+    .tab-btn {
+      flex-direction: row; text-align: left; font-size: 14px; padding: 10px 12px; gap: 10px;
+    }
+    .tab-btn .tab-label-full { display: inline; }
+    .tab-btn .tab-label-short { display: none; }
+    .sidebar-user { flex-direction: row; text-align: left; gap: 10px; }
+    .sidebar-user-name { font-size: 13.5px; }
+    .logout-btn { width: auto; margin-left: auto; padding: 8px 10px; }
   }
-  .tab-btn {
-    flex: 1;
-    font-family: 'Inter', sans-serif;
-    font-weight: 600;
-    font-size: 13.5px;
-    padding: 9px 6px;
-    background: transparent;
-    border: none;
-    border-radius: 7px;
-    color: var(--text-muted);
-    cursor: pointer;
-  }
-  .tab-btn[aria-selected="true"] { background: var(--surface); color: var(--text); box-shadow: 0 1px 2px rgba(0,0,0,0.08); }
 
   section[data-panel] { display: none; }
   section[data-panel].active { display: block; }
@@ -279,6 +304,7 @@
     color: #fff; font-family: 'Oswald', sans-serif; font-weight: 600; flex-shrink: 0;
   }
   .avatar-lg { width: 68px; height: 68px; font-size: 26px; }
+  .avatar-sm { width: 30px; height: 30px; font-size: 13px; }
   .perfil-nome { font-family: 'Oswald', sans-serif; font-weight: 600; font-size: 19px; }
   .perfil-usuario { color: var(--text-muted); font-size: 13.5px; margin-top: 2px; }
 </style>
@@ -322,22 +348,38 @@
 </div>
 
 <!-- APP -->
-<div class="wrap" id="appScreen" style="display:none;">
-  <header>
-    <div>
-      <h1>Sistema de Treino</h1>
-      <p>Plano da semana, ritmos de corrida e diário de treinos — tudo num lugar só.</p>
+<div class="app-shell" id="appScreen" style="display:none;">
+  <aside class="sidebar">
+    <div class="sidebar-brand">Treino</div>
+    <nav class="tabs" role="tablist">
+      <button class="tab-btn" role="tab" aria-selected="true" data-target="plano">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
+        <span class="tab-label-short">Plano</span><span class="tab-label-full">Plano da Semana</span>
+      </button>
+      <button class="tab-btn" role="tab" aria-selected="false" data-target="ritmos">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l2 7 4-14 2 7h6"/></svg>
+        <span class="tab-label-short">Ritmos</span><span class="tab-label-full">Ritmos</span>
+      </button>
+      <button class="tab-btn" role="tab" aria-selected="false" data-target="diario">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v16H6.5A2.5 2.5 0 0 0 4 21.5"/><path d="M4 5.5v16"/></svg>
+        <span class="tab-label-short">Diário</span><span class="tab-label-full">Diário</span>
+      </button>
+      <button class="tab-btn" role="tab" aria-selected="false" data-target="perfil">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.5"/><path d="M4.5 20a7.5 7.5 0 0 1 15 0"/></svg>
+        <span class="tab-label-short">Perfil</span><span class="tab-label-full">Perfil</span>
+      </button>
+    </nav>
+    <div class="sidebar-user">
+      <div class="avatar avatar-sm" id="sidebarAvatar"></div>
+      <div class="sidebar-user-name" id="sidebarNome">—</div>
+      <button class="logout-btn" id="logoutBtn" title="Sair">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v8"/><path d="M18 6.5a8 8 0 1 1-12 0"/></svg>
+        Sair
+      </button>
     </div>
-    <button class="logout-btn" id="logoutBtn">Sair</button>
-  </header>
+  </aside>
 
-  <div class="tabs" role="tablist">
-    <button class="tab-btn" role="tab" aria-selected="true" data-target="plano">Plano da Semana</button>
-    <button class="tab-btn" role="tab" aria-selected="false" data-target="ritmos">Ritmos</button>
-    <button class="tab-btn" role="tab" aria-selected="false" data-target="diario">Diário</button>
-    <button class="tab-btn" role="tab" aria-selected="false" data-target="perfil">Perfil</button>
-  </div>
-
+  <main class="main-content">
   <!-- PLANO -->
   <section data-panel="plano" class="active">
     <h2 class="section-title">Treino híbrido — 5 dias</h2>
@@ -503,9 +545,8 @@
       <div class="error" id="perfilError"></div>
       <button type="submit" class="primary" style="width:100%;">Salvar nome</button>
     </form>
-
-    <button class="logout-btn" id="perfilLogoutBtn" style="padding:10px 14px;">Sair</button>
   </section>
+  </main>
 </div>
 
 <script src="config.js"></script>

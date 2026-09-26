@@ -196,7 +196,7 @@
   }
   function showAppScreen() {
     document.getElementById('authScreen').style.display = 'none';
-    document.getElementById('appScreen').style.display = 'block';
+    document.getElementById('appScreen').style.display = 'flex';
   }
 
   if (!configOk()) {
@@ -234,9 +234,6 @@
     });
 
     document.getElementById('logoutBtn').addEventListener('click', function () {
-      supabase.auth.signOut();
-    });
-    document.getElementById('perfilLogoutBtn').addEventListener('click', function () {
       supabase.auth.signOut();
     });
 
@@ -551,6 +548,9 @@
     document.getElementById('perfilNomeDisplay').textContent = nome;
     document.getElementById('perfilUsuarioDisplay').textContent = 'Usuário: ' + usernameFromEmail(currentUser.email);
     document.getElementById('perfilNomeInput').value = nome;
+
+    applyAvatar(document.getElementById('sidebarAvatar'), currentUser);
+    document.getElementById('sidebarNome').textContent = nome;
   }
 
   // ---------- diário: render ----------
