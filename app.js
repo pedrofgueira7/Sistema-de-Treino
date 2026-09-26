@@ -192,6 +192,49 @@
     return msg;
   }
 
+  function prefersReducedMotion() {
+    return window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  }
+
+  function showToast(message, type) {
+    var container = document.getElementById('toastContainer');
+    if (!container) { alert(message); return; }
+    var toast = document.createElement('div');
+    toast.className = 'toast' + (type === 'error' ? ' error' : '');
+    toast.textContent = message;
+    container.appendChild(toast);
+    setTimeout(function () {
+      toast.classList.add('leaving');
+      toast.addEventListener('animationend', function () { toast.remove(); }, { once: true });
+      setTimeout(function () { toast.remove(); }, 400); // rede de segurança
+    }, 3500);
+  }
+
+  function animateNumber(el, toValue, formatFn, duration) {
+    if (!el) return;
+    formatFn = formatFn || function (v) { return String(Math.round(v)); };
+    if (prefersReducedMotion()) { el.textContent = formatFn(toValue); el.setAttribute('data-raw-value', toValue); return; }
+    duration = duration || 500;
+    var fromValue = parseFloat(el.getAttribute('data-raw-value'));
+    if (isNaN(fromValue)) fromValue = 0;
+    if (Math.abs(fromValue - toValue) < 0.001) {
+      el.textContent = formatFn(toValue);
+      el.setAttribute('data-raw-value', toValue);
+      return;
+    }
+    el.setAttribute('data-raw-value', toValue);
+    var start = null;
+    function step(ts) {
+      if (start === null) start = ts;
+      var progress = Math.min((ts - start) / duration, 1);
+      var eased = 1 - Math.pow(1 - progress, 3);
+      var current = fromValue + (toValue - fromValue) * eased;
+      el.textContent = formatFn(current);
+      if (progress < 1 && el.getAttribute('data-raw-value') == toValue) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  }
+
   // Supabase Auth exige um "email" — convertemos o usuário escolhido num email sintético,
   // já que este app usa usuário+senha em vez de email de verdade.
   var USERNAME_DOMAIN = '@treino.local';
@@ -223,7 +266,7 @@
       document.querySelectorAll('section[data-panel]').forEach(function (s) { s.classList.remove('active'); });
       btn.setAttribute('aria-selected', 'true');
       document.querySelector('section[data-panel="' + btn.getAttribute('data-target') + '"]').classList.add('active');
-      document.getElementById('appScreen').classList.remove('sidebar-open');
+      closeSidebarDrawer();
       moveTabIndicator();
     });
   });
@@ -231,12 +274,18 @@
   window.addEventListener('load', moveTabIndicator);
 
   // ---------- menu (gaveta no mobile) ----------
-  document.getElementById('menuToggleBtn').addEventListener('click', function () {
-    document.getElementById('appScreen').classList.toggle('sidebar-open');
-  });
-  document.getElementById('sidebarBackdrop').addEventListener('click', function () {
+  function closeSidebarDrawer() {
     document.getElementById('appScreen').classList.remove('sidebar-open');
+    var menuBtn = document.getElementById('menuToggleBtn');
+    menuBtn.classList.remove('open');
+    menuBtn.setAttribute('aria-expanded', 'false');
+  }
+  document.getElementById('menuToggleBtn').addEventListener('click', function () {
+    var isOpen = document.getElementById('appScreen').classList.toggle('sidebar-open');
+    this.classList.toggle('open', isOpen);
+    this.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
   });
+  document.getElementById('sidebarBackdrop').addEventListener('click', closeSidebarDrawer);
 
   // ---------- auth screens ----------
   function showAuthScreen(message) {
@@ -404,12 +453,12 @@
         user_id: user.id, semana_inicio: weekStartISO(), dia: dia, concluido: concluido
       }, { onConflict: 'user_id,semana_inicio,dia' });
     }).then(function (res2) {
-      if (res2.error) { alert(friendlyError(res2.error)); checkbox.checked = !concluido; return; }
+      if (res2.error) { showToast(friendlyError(res2.error), 'error'); checkbox.checked = !concluido; return; }
       planoConcluido[dia] = concluido;
       checkbox.closest('.day-card').classList.toggle('done', concluido);
       updateSemanaInfo();
     }).catch(function (err) {
-      alert(friendlyError(err));
+      showToast(friendlyError(err), 'error');
       checkbox.checked = !concluido;
     });
   }
@@ -541,14 +590,14 @@
       });
     }).then(function (res2) {
       planoSaveBtn.disabled = false;
-      if (res2.error) { alert(friendlyError(res2.error)); return; }
+      if (res2.error) { showToast(friendlyError(res2.error), 'error'); return; }
       planoEditMode = false;
       planoEditBtn.style.display = 'inline-block';
       planoEditActions.style.display = 'none';
       renderPlano();
     }).catch(function (err) {
       planoSaveBtn.disabled = false;
-      alert(friendlyError(err));
+      showToast(friendlyError(err), 'error');
     });
   });
 
@@ -582,7 +631,7 @@
       }
       strip.appendChild(cell);
     }
-    document.getElementById('streakCount').textContent = computeStreak();
+    animateNumber(document.getElementById('streakCount'), computeStreak());
   }
 
   function onToggleCheckin(iso, cell) {
@@ -590,7 +639,7 @@
     var novoValor = !anterior;
     checkins[iso] = novoValor;
     cell.classList.toggle('checked', novoValor);
-    document.getElementById('streakCount').textContent = computeStreak();
+    animateNumber(document.getElementById('streakCount'), computeStreak());
 
     supabase.auth.getUser().then(function (res) {
       var user = res.data.user;
@@ -600,10 +649,10 @@
     }).then(function (res2) {
       if (res2.error) throw res2.error;
     }).catch(function (err) {
-      alert(friendlyError(err));
+      showToast(friendlyError(err), 'error');
       checkins[iso] = anterior;
       cell.classList.toggle('checked', !!anterior);
-      document.getElementById('streakCount').textContent = computeStreak();
+      animateNumber(document.getElementById('streakCount'), computeStreak());
     });
   }
 
@@ -631,17 +680,19 @@
     return '<span class="tag ' + (within ? 'ok' : 'off') + '">' + (within ? 'dentro do ritmo alvo' : 'fora do ritmo alvo') + '</span>';
   }
 
+  function formatKm(v) { return v.toFixed(1).replace('.0', ''); }
+
   function renderStats() {
     var count = entries.length;
-    document.getElementById('statCount').textContent = count;
+    animateNumber(document.getElementById('statCount'), count);
     if (count === 0) {
-      document.getElementById('statDist').textContent = '0';
+      animateNumber(document.getElementById('statDist'), 0, formatKm);
       document.getElementById('statPace').textContent = '—';
       return;
     }
     var totalDist = entries.reduce(function (sum, e) { return sum + e.distancia; }, 0);
     var totalSec = entries.reduce(function (sum, e) { return sum + e.tempoSegundos; }, 0);
-    document.getElementById('statDist').textContent = totalDist.toFixed(1).replace('.0', '');
+    animateNumber(document.getElementById('statDist'), totalDist, formatKm);
     if (totalDist > 0) document.getElementById('statPace').textContent = formatClock(totalSec / totalDist);
   }
 
@@ -709,7 +760,7 @@
         var id = btn.getAttribute('data-id');
         btn.disabled = true;
         supabase.from('treinos').delete().eq('id', id).then(function (res) {
-          if (res.error) { alert(friendlyError(res.error)); btn.disabled = false; return; }
+          if (res.error) { showToast(friendlyError(res.error), 'error'); btn.disabled = false; return; }
           if (editingId === id) cancelEdit();
           animateEntryRemoval(btn.closest('.entry'), function () {
             entries = entries.filter(function (e) { return String(e.id) !== id; });
@@ -718,7 +769,7 @@
             renderChart();
           });
         }).catch(function (err) {
-          alert(friendlyError(err));
+          showToast(friendlyError(err), 'error');
           btn.disabled = false;
         });
       });
@@ -764,6 +815,7 @@
       options: {
         responsive: true,
         maintainAspectRatio: false,
+        animation: { duration: prefersReducedMotion() ? 0 : 600, easing: 'easeOutCubic' },
         plugins: {
           legend: { display: false },
           tooltip: { callbacks: { label: function (ctx) { return 'Ritmo: ' + formatClock(ctx.parsed.y * 60) + ' /km'; } } }
@@ -890,11 +942,11 @@
         });
         return supabase.from('treinos').insert(rows);
       }).then(function (res2) {
-        if (res2.error) { alert(friendlyError(res2.error)); btn.disabled = false; btn.textContent = 'Importar treinos salvos neste navegador'; return; }
+        if (res2.error) { showToast(friendlyError(res2.error), 'error'); btn.disabled = false; btn.textContent = 'Importar treinos salvos neste navegador'; return; }
         btn.style.display = 'none';
         loadEntries().then(function () { renderStats(); renderEntries(); renderChart(); });
       }).catch(function (err) {
-        alert(friendlyError(err));
+        showToast(friendlyError(err), 'error');
         btn.disabled = false;
         btn.textContent = 'Importar treinos salvos neste navegador';
       });
@@ -967,6 +1019,8 @@
   function initApp(isRetry) {
     if (appInitialized && !isRetry) return;
     appInitialized = true;
+    var mainContent = document.querySelector('.main-content');
+    if (mainContent) mainContent.classList.add('loading');
     Promise.all([loadRef(), loadEntries(), loadPlanoProgresso(), loadPlanoData(), loadUser(), loadCheckins()]).then(function () {
       document.getElementById('refDist').value = ref.distanciaKm;
       document.getElementById('refTempo').value = formatClock(ref.tempoSegundos);
@@ -980,13 +1034,15 @@
       renderPerfil();
       checkLocalImport();
       moveTabIndicator();
+      if (mainContent) mainContent.classList.remove('loading');
     }).catch(function (err) {
       if (!isRetry && isClockSkewError(err)) {
         setTimeout(function () { initApp(true); }, 1200);
         return;
       }
       appInitialized = false;
-      alert('Não foi possível carregar seus dados: ' + friendlyError(err) + '\n\nVerifique sua internet e recarregue a página.');
+      if (mainContent) mainContent.classList.remove('loading');
+      showToast('Não foi possível carregar seus dados: ' + friendlyError(err) + '. Verifique sua internet e recarregue a página.', 'error');
     });
   }
 
