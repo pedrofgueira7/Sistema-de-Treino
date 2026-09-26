@@ -429,6 +429,12 @@
   });
 
   // ---------- plano da semana ----------
+  function exerciseSearchQuery(text) {
+    var clean = text.replace(/\{\{ritmo:\w+\}\}/g, '').trim();
+    var name = clean.split(/[:,—]/)[0].trim();
+    return (name || clean) + ' exercício execução';
+  }
+
   function renderExerciseLine(li, text, paces) {
     var re = /\{\{ritmo:(\w+)\}\}/g;
     var lastIndex = 0;
@@ -443,6 +449,17 @@
       lastIndex = re.lastIndex;
     }
     if (lastIndex < text.length) li.appendChild(document.createTextNode(text.slice(lastIndex)));
+
+    var query = exerciseSearchQuery(text);
+    var link = document.createElement('a');
+    link.className = 'exercicio-video-link';
+    link.href = 'https://www.youtube.com/results?search_query=' + encodeURIComponent(query);
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+    link.title = 'Buscar vídeo no YouTube';
+    link.setAttribute('aria-label', 'Buscar vídeo no YouTube: ' + query);
+    link.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"></circle><polygon points="10,8 16,12 10,16" fill="currentColor" stroke="none"></polygon></svg>';
+    li.appendChild(link);
   }
 
   function onTogglePlanoDia(dia, checkbox) {
