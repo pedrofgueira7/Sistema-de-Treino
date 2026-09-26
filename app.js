@@ -203,6 +203,20 @@
   }
 
   // ---------- tabs ----------
+  function moveTabIndicatorNow() {
+    var indicator = document.getElementById('tabIndicator');
+    var selected = document.querySelector('.tab-btn[aria-selected="true"]');
+    if (!indicator || !selected || !selected.offsetHeight) return;
+    indicator.style.transform = 'translateY(' + selected.offsetTop + 'px)';
+    indicator.style.height = selected.offsetHeight + 'px';
+  }
+  function moveTabIndicator() {
+    // usa rAF pra medir só depois que o layout (ex: sidebar acabou de virar visível) estiver pronto,
+    // com um setTimeout como rede de segurança caso o rAF demore (aba em segundo plano, etc.)
+    requestAnimationFrame(function () { requestAnimationFrame(moveTabIndicatorNow); });
+    setTimeout(moveTabIndicatorNow, 150);
+  }
+
   document.querySelectorAll('.tab-btn').forEach(function (btn) {
     btn.addEventListener('click', function () {
       document.querySelectorAll('.tab-btn').forEach(function (b) { b.setAttribute('aria-selected', 'false'); });
@@ -210,8 +224,11 @@
       btn.setAttribute('aria-selected', 'true');
       document.querySelector('section[data-panel="' + btn.getAttribute('data-target') + '"]').classList.add('active');
       document.getElementById('appScreen').classList.remove('sidebar-open');
+      moveTabIndicator();
     });
   });
+  window.addEventListener('resize', moveTabIndicator);
+  window.addEventListener('load', moveTabIndicator);
 
   // ---------- menu (gaveta no mobile) ----------
   document.getElementById('menuToggleBtn').addEventListener('click', function () {
@@ -232,6 +249,7 @@
   function showAppScreen() {
     document.getElementById('authScreen').style.display = 'none';
     document.getElementById('appScreen').style.display = 'flex';
+    moveTabIndicator();
   }
 
   if (!configOk()) {
@@ -627,6 +645,25 @@
     if (totalDist > 0) document.getElementById('statPace').textContent = formatClock(totalSec / totalDist);
   }
 
+  function animateEntryRemoval(entryEl, callback) {
+    if (!entryEl) { callback(); return; }
+    var h = entryEl.getBoundingClientRect().height;
+    entryEl.style.height = h + 'px';
+    entryEl.getBoundingClientRect(); // força o navegador a aplicar a altura antes de animar
+    var done = false;
+    var finish = function () {
+      if (done) return;
+      done = true;
+      entryEl.removeEventListener('transitionend', onEnd);
+      callback();
+    };
+    var onEnd = function (ev) { if (ev.target === entryEl && ev.propertyName === 'height') finish(); };
+    entryEl.addEventListener('transitionend', onEnd);
+    entryEl.classList.add('removing');
+    entryEl.style.height = '0px';
+    setTimeout(finish, 400); // rede de segurança caso o transitionend não dispare
+  }
+
   function renderEntries(highlightId) {
     var container = document.getElementById('entriesList');
     container.innerHTML = '';
@@ -673,11 +710,13 @@
         btn.disabled = true;
         supabase.from('treinos').delete().eq('id', id).then(function (res) {
           if (res.error) { alert(friendlyError(res.error)); btn.disabled = false; return; }
-          entries = entries.filter(function (e) { return String(e.id) !== id; });
           if (editingId === id) cancelEdit();
-          renderStats();
-          renderEntries();
-          renderChart();
+          animateEntryRemoval(btn.closest('.entry'), function () {
+            entries = entries.filter(function (e) { return String(e.id) !== id; });
+            renderStats();
+            renderEntries();
+            renderChart();
+          });
         }).catch(function (err) {
           alert(friendlyError(err));
           btn.disabled = false;
@@ -940,6 +979,7 @@
       renderCheckinStrip();
       renderPerfil();
       checkLocalImport();
+      moveTabIndicator();
     }).catch(function (err) {
       if (!isRetry && isClockSkewError(err)) {
         setTimeout(function () { initApp(true); }, 1200);
