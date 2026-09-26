@@ -253,6 +253,34 @@
   .remove-btn:hover { color: var(--danger); border-color: var(--danger); }
   .edit-btn:hover { color: var(--accent-mod); border-color: var(--accent-mod); }
   .empty { color: var(--text-muted); font-size: 14px; border: 1px dashed var(--border); border-radius: var(--radius); padding: 20px; text-align: center; }
+
+  /* ---- Check-in semanal ---- */
+  .checkin-box { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; margin-bottom: 20px; }
+  .checkin-top { display: flex; align-items: center; gap: 6px; margin-bottom: 14px; }
+  .streak-flame { font-size: 18px; line-height: 1; }
+  .streak-count { font-family: 'Oswald', sans-serif; font-weight: 600; font-size: 18px; }
+  .streak-label { color: var(--text-muted); font-size: 12.5px; margin-left: 2px; }
+  .week-strip { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+  .week-day {
+    display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 2px;
+    border-radius: 10px; cursor: pointer; border: 1px solid transparent; background: var(--surface-2);
+  }
+  .week-day .wd-label { font-size: 10px; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.3px; }
+  .week-day .wd-num { font-size: 13px; font-weight: 600; }
+  .week-day.today { border-color: var(--accent-mod); }
+  .week-day.checked { background: var(--accent-mod); }
+  .week-day.checked .wd-label, .week-day.checked .wd-num { color: #fff; }
+  .week-day.future { opacity: 0.4; cursor: default; }
+
+  /* ---- Perfil ---- */
+  .perfil-card { display: flex; align-items: center; gap: 16px; margin-bottom: 24px; }
+  .avatar {
+    border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    color: #fff; font-family: 'Oswald', sans-serif; font-weight: 600; flex-shrink: 0;
+  }
+  .avatar-lg { width: 68px; height: 68px; font-size: 26px; }
+  .perfil-nome { font-family: 'Oswald', sans-serif; font-weight: 600; font-size: 19px; }
+  .perfil-usuario { color: var(--text-muted); font-size: 13.5px; margin-top: 2px; }
 </style>
 </head>
 <body>
@@ -267,6 +295,12 @@
   </header>
   <form class="entry-form" id="loginForm">
     <h3>Entrar</h3>
+    <div class="field-row" style="grid-template-columns: 1fr;">
+      <div class="field full">
+        <label for="authNome">Nome</label>
+        <input type="text" id="authNome" autocomplete="name" placeholder="Usado só ao criar conta">
+      </div>
+    </div>
     <div class="field-row" style="grid-template-columns: 1fr;">
       <div class="field full">
         <label for="authUsuario">Usuário</label>
@@ -301,6 +335,7 @@
     <button class="tab-btn" role="tab" aria-selected="true" data-target="plano">Plano da Semana</button>
     <button class="tab-btn" role="tab" aria-selected="false" data-target="ritmos">Ritmos</button>
     <button class="tab-btn" role="tab" aria-selected="false" data-target="diario">Diário</button>
+    <button class="tab-btn" role="tab" aria-selected="false" data-target="perfil">Perfil</button>
   </div>
 
   <!-- PLANO -->
@@ -376,6 +411,15 @@
     <h2 class="section-title">Diário de treinos</h2>
     <p class="section-sub">Registre cada corrida e acompanhe sua evolução.</p>
 
+    <div class="checkin-box">
+      <div class="checkin-top">
+        <span class="streak-flame">🔥</span>
+        <span class="streak-count" id="streakCount">0</span>
+        <span class="streak-label">dias seguidos</span>
+      </div>
+      <div class="week-strip" id="weekStrip"></div>
+    </div>
+
     <div class="stats">
       <div class="stat"><div class="num" id="statCount">0</div><div class="label">treinos</div></div>
       <div class="stat"><div class="num" id="statDist">0</div><div class="label">km no total</div></div>
@@ -433,6 +477,34 @@
     </form>
 
     <div id="entriesList"></div>
+  </section>
+
+  <!-- PERFIL -->
+  <section data-panel="perfil">
+    <h2 class="section-title">Perfil</h2>
+    <p class="section-sub">Sua conta neste app.</p>
+
+    <div class="perfil-card">
+      <div class="avatar avatar-lg" id="perfilAvatar"></div>
+      <div>
+        <div class="perfil-nome" id="perfilNomeDisplay">—</div>
+        <div class="perfil-usuario" id="perfilUsuarioDisplay">—</div>
+      </div>
+    </div>
+
+    <form class="entry-form" id="perfilForm">
+      <h3>Editar nome</h3>
+      <div class="field-row" style="grid-template-columns: 1fr;">
+        <div class="field full">
+          <label for="perfilNomeInput">Nome de exibição</label>
+          <input type="text" id="perfilNomeInput" required>
+        </div>
+      </div>
+      <div class="error" id="perfilError"></div>
+      <button type="submit" class="primary" style="width:100%;">Salvar nome</button>
+    </form>
+
+    <button class="logout-btn" id="perfilLogoutBtn" style="padding:10px 14px;">Sair</button>
   </section>
 </div>
 

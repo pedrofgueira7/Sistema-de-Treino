@@ -47,6 +47,9 @@
     ] }
   ];
 
+  var WEEKDAY_LABELS = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S']; // Dom, Seg, Ter, Qua, Qui, Sex, Sáb
+  var AVATAR_COLORS = ['--accent-leve', '--accent-interv', '--accent-mod', '--accent-longa', '--accent-prova'];
+
   var entries = [];
   var ref = DEFAULT_REF;
   var planoConcluido = {}; // { "1": true, ... } para a semana atual
@@ -56,6 +59,8 @@
   var editingId = null;
   var paceChart = null;
   var supabase = null;
+  var checkins = {}; // { 'YYYY-MM-DD': true }
+  var currentUser = null;
 
   // ---------- config / client ----------
   function configOk() {
@@ -116,6 +121,40 @@
     var diff = (day === 0 ? -6 : 1 - day);
     d.setDate(d.getDate() + diff);
     return localISOFromDate(d);
+  }
+  function sundayOfCurrentWeek() {
+    var d = new Date();
+    d.setDate(d.getDate() - d.getDay());
+    return d;
+  }
+  function computeStreak() {
+    var streak = 0;
+    var d = new Date();
+    if (!checkins[todayLocalISO()]) d.setDate(d.getDate() - 1);
+    while (true) {
+      var iso = localISOFromDate(d);
+      if (checkins[iso]) { streak++; d.setDate(d.getDate() - 1); } else break;
+    }
+    return streak;
+  }
+
+  function capitalize(str) { return str ? str.charAt(0).toUpperCase() + str.slice(1) : str; }
+  function usernameFromEmail(email) { return (email || '').split('@')[0]; }
+  function getDisplayName(user) {
+    if (user && user.user_metadata && user.user_metadata.nome) return user.user_metadata.nome;
+    return capitalize(usernameFromEmail(user ? user.email : '')) || 'Usuário';
+  }
+  function avatarColorVar(user) {
+    var seed = (user && user.id) || '';
+    var sum = 0;
+    for (var i = 0; i < seed.length; i++) sum += seed.charCodeAt(i);
+    return AVATAR_COLORS[sum % AVATAR_COLORS.length];
+  }
+  function applyAvatar(el, user) {
+    if (!el) return;
+    var nome = getDisplayName(user);
+    el.textContent = nome.charAt(0).toUpperCase();
+    el.style.background = 'var(' + avatarColorVar(user) + ')';
   }
 
   function friendlyError(err) {
@@ -179,13 +218,16 @@
     document.getElementById('signupBtn').addEventListener('click', function () {
       var errorEl = document.getElementById('authError');
       errorEl.textContent = '';
+      var nome = document.getElementById('authNome').value.trim();
       var usuario = document.getElementById('authUsuario').value.trim();
       var senha = document.getElementById('authSenha').value;
-      if (!usuario || senha.length < 6) {
-        errorEl.textContent = 'Preencha o usuário e uma senha com pelo menos 6 caracteres.';
+      if (!nome || !usuario || senha.length < 6) {
+        errorEl.textContent = 'Preencha o nome, o usuário e uma senha com pelo menos 6 caracteres.';
         return;
       }
-      supabase.auth.signUp({ email: usernameToEmail(usuario), password: senha }).then(function (res) {
+      supabase.auth.signUp({
+        email: usernameToEmail(usuario), password: senha, options: { data: { nome: nome } }
+      }).then(function (res) {
         if (res.error) errorEl.textContent = friendlyError(res.error);
         else errorEl.textContent = 'Conta criada! Já pode entrar com esse usuário e senha.';
       }).catch(function (err) { errorEl.textContent = friendlyError(err); });
@@ -194,12 +236,29 @@
     document.getElementById('logoutBtn').addEventListener('click', function () {
       supabase.auth.signOut();
     });
+    document.getElementById('perfilLogoutBtn').addEventListener('click', function () {
+      supabase.auth.signOut();
+    });
+
+    document.getElementById('perfilForm').addEventListener('submit', function (ev) {
+      ev.preventDefault();
+      var errorEl = document.getElementById('perfilError');
+      errorEl.textContent = '';
+      var novoNome = document.getElementById('perfilNomeInput').value.trim();
+      if (!novoNome) { errorEl.textContent = 'Informe um nome.'; return; }
+      supabase.auth.updateUser({ data: { nome: novoNome } }).then(function (res) {
+        if (res.error) { errorEl.textContent = friendlyError(res.error); return; }
+        currentUser = res.data.user;
+        renderPerfil();
+      }).catch(function (err) { errorEl.textContent = friendlyError(err); });
+    });
 
     supabase.auth.onAuthStateChange(function (event, session) {
       if (session) {
         showAppScreen();
         initApp();
       } else {
+        appInitialized = false; // permite recarregar do zero se logar com outra conta na mesma aba
         showAuthScreen();
       }
     });
@@ -428,6 +487,71 @@
       alert(friendlyError(err));
     });
   });
+
+  // ---------- diário: check-in semanal ----------
+  function renderCheckinStrip() {
+    var strip = document.getElementById('weekStrip');
+    if (!strip) return;
+    strip.innerHTML = '';
+    var sunday = sundayOfCurrentWeek();
+    var todayISO = todayLocalISO();
+    for (var i = 0; i < 7; i++) {
+      var d = new Date(sunday);
+      d.setDate(sunday.getDate() + i);
+      var iso = localISOFromDate(d);
+      var isFuture = iso > todayISO;
+      var isToday = iso === todayISO;
+      var cell = document.createElement('div');
+      cell.className = 'week-day' + (checkins[iso] ? ' checked' : '') + (isToday ? ' today' : '') + (isFuture ? ' future' : '');
+      var label = document.createElement('div');
+      label.className = 'wd-label';
+      label.textContent = isToday ? 'Hoje' : WEEKDAY_LABELS[i];
+      var num = document.createElement('div');
+      num.className = 'wd-num';
+      num.textContent = String(d.getDate());
+      cell.appendChild(label);
+      cell.appendChild(num);
+      if (!isFuture) {
+        (function (isoClicked, cellClicked) {
+          cellClicked.addEventListener('click', function () { onToggleCheckin(isoClicked, cellClicked); });
+        })(iso, cell);
+      }
+      strip.appendChild(cell);
+    }
+    document.getElementById('streakCount').textContent = computeStreak();
+  }
+
+  function onToggleCheckin(iso, cell) {
+    var anterior = checkins[iso];
+    var novoValor = !anterior;
+    checkins[iso] = novoValor;
+    cell.classList.toggle('checked', novoValor);
+    document.getElementById('streakCount').textContent = computeStreak();
+
+    supabase.auth.getUser().then(function (res) {
+      var user = res.data.user;
+      return supabase.from('checkins').upsert({
+        user_id: user.id, data: iso, feito: novoValor
+      }, { onConflict: 'user_id,data' });
+    }).then(function (res2) {
+      if (res2.error) throw res2.error;
+    }).catch(function (err) {
+      alert(friendlyError(err));
+      checkins[iso] = anterior;
+      cell.classList.toggle('checked', !!anterior);
+      document.getElementById('streakCount').textContent = computeStreak();
+    });
+  }
+
+  // ---------- perfil ----------
+  function renderPerfil() {
+    if (!currentUser) return;
+    var nome = getDisplayName(currentUser);
+    applyAvatar(document.getElementById('perfilAvatar'), currentUser);
+    document.getElementById('perfilNomeDisplay').textContent = nome;
+    document.getElementById('perfilUsuarioDisplay').textContent = 'Usuário: ' + usernameFromEmail(currentUser.email);
+    document.getElementById('perfilNomeInput').value = nome;
+  }
 
   // ---------- diário: render ----------
   function metaTag(entry) {
@@ -723,12 +847,31 @@
       planoData = deepCopy(DEFAULT_PLANO);
     });
   }
+  function loadUser() {
+    return supabase.auth.getUser().then(function (res) {
+      if (res.error) throw res.error;
+      currentUser = res.data.user;
+    });
+  }
+  function loadCheckins() {
+    // não fatal: se a tabela `checkins` ainda não existir, a tira de dias fica zerada em vez de travar o app.
+    var start = new Date();
+    start.setDate(start.getDate() - 60);
+    return supabase.from('checkins').select('data,feito').gte('data', localISOFromDate(start)).then(function (res) {
+      if (res.error) throw res.error;
+      checkins = {};
+      (res.data || []).forEach(function (row) { if (row.feito) checkins[row.data] = true; });
+    }).catch(function (err) {
+      console.warn('Não foi possível carregar os check-ins:', err);
+      checkins = {};
+    });
+  }
 
   var appInitialized = false;
   function initApp() {
     if (appInitialized) return;
     appInitialized = true;
-    Promise.all([loadRef(), loadEntries(), loadPlanoProgresso(), loadPlanoData()]).then(function () {
+    Promise.all([loadRef(), loadEntries(), loadPlanoProgresso(), loadPlanoData(), loadUser(), loadCheckins()]).then(function () {
       document.getElementById('refDist').value = ref.distanciaKm;
       document.getElementById('refTempo').value = formatClock(ref.tempoSegundos);
       document.getElementById('fData').value = todayLocalISO();
@@ -737,6 +880,8 @@
       renderEntries();
       renderChart();
       renderPlano();
+      renderCheckinStrip();
+      renderPerfil();
       checkLocalImport();
     }).catch(function (err) {
       appInitialized = false;

@@ -37,10 +37,20 @@ create table if not exists plano (
   atualizado_em timestamptz not null default now()
 );
 
+-- check-in diário (tira do calendário quais dias teve treino, pra tira de semana + sequência)
+create table if not exists checkins (
+  user_id uuid not null default auth.uid() references auth.users (id) on delete cascade,
+  data date not null,
+  feito boolean not null default true,
+  criado_em timestamptz not null default now(),
+  primary key (user_id, data)
+);
+
 alter table treinos enable row level security;
 alter table referencia enable row level security;
 alter table plano_progresso enable row level security;
 alter table plano enable row level security;
+alter table checkins enable row level security;
 
 drop policy if exists "treinos: dono le" on treinos;
 drop policy if exists "treinos: dono insere" on treinos;
@@ -74,5 +84,15 @@ create policy "plano: dono le" on plano for select using (auth.uid() = user_id);
 create policy "plano: dono insere" on plano for insert with check (auth.uid() = user_id);
 create policy "plano: dono atualiza" on plano for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
+drop policy if exists "checkins: dono le" on checkins;
+drop policy if exists "checkins: dono insere" on checkins;
+drop policy if exists "checkins: dono atualiza" on checkins;
+drop policy if exists "checkins: dono remove" on checkins;
+create policy "checkins: dono le" on checkins for select using (auth.uid() = user_id);
+create policy "checkins: dono insere" on checkins for insert with check (auth.uid() = user_id);
+create policy "checkins: dono atualiza" on checkins for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
+create policy "checkins: dono remove" on checkins for delete using (auth.uid() = user_id);
+
 create index if not exists treinos_user_data_idx on treinos (user_id, data desc);
 create index if not exists plano_progresso_user_semana_idx on plano_progresso (user_id, semana_inicio);
+create index if not exists checkins_user_data_idx on checkins (user_id, data desc);
